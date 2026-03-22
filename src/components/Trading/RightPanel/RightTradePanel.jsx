@@ -14,6 +14,8 @@ import SoundManager from "@/sound/SoundManager.js";
 import { useMarketConfigs } from "@/context/MarketConfigContext";
 import { useMaintenance } from "@/context/MaintenanceContext";
 import { useTranslation } from "react-i18next";
+import { useTradingAuth } from "@/context/TradingAuthContext";
+import { formatCurrencyValue, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
 
 const EXPIRATION_SECONDS = {
   M1: 60,
@@ -254,8 +256,12 @@ function getPairIconSrc(raw) {
 }
 
 const RightTradePanel = ({ onHoverAction }) => {
-  const { t } = useTranslation(["trade", "common"]);
+  const { t, i18n } = useTranslation(["trade", "common"]);
   const { t: tTradeHistory } = useTranslation("tradeHistory");
+  const { profile } = useTradingAuth();
+  const accountCurrency = normalizeCurrency(profile?.currency, "BRL");
+  const accountLocale = profile?.locale || i18n?.resolvedLanguage || undefined;
+  const currencySymbol = getCurrencySymbol(accountCurrency);
 
   const [time, setTime] = useState("M1");
   const [amount, setAmount] = useState(DEFAULT_AMOUNT);
@@ -550,8 +556,8 @@ const RightTradePanel = ({ onHoverAction }) => {
             <div className={styles.percentageText}>+{Math.round(payout * 100)}%</div>
           </div>
           <div className={styles.profitDisplay}>
-            <span className={styles.currencySymbol}>R$</span>
-            <span className={styles.profitAmount}>{profit.toFixed(2)}</span>
+            <span className={styles.currencySymbol}>{currencySymbol}</span>
+            <span className={styles.profitAmount}>{formatCurrencyValue(profit, accountCurrency, accountLocale)}</span>
           </div>
         </div>
 

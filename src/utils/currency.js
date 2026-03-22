@@ -18,6 +18,23 @@ export function getCurrencyLocale(currency, locale) {
   return "pt-BR";
 }
 
+export function formatCurrency(value, currency = "BRL", locale) {
+  const cur = normalizeCurrency(currency);
+  const loc = getCurrencyLocale(cur, locale);
+  const n = Number(value);
+  const safe = Number.isFinite(n) ? n : 0;
+  try {
+    return new Intl.NumberFormat(loc, {
+      style: "currency",
+      currency: cur,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(safe);
+  } catch {
+    return `${getCurrencySymbol(cur)} ${safe.toFixed(2)}`;
+  }
+}
+
 export function formatCurrencyValue(value, currency = "BRL", locale) {
   const cur = normalizeCurrency(currency);
   const loc = getCurrencyLocale(cur, locale);
@@ -31,9 +48,4 @@ export function formatCurrencyValue(value, currency = "BRL", locale) {
   } catch {
     return safe.toFixed(2);
   }
-}
-
-export function formatCurrency(value, currency = "BRL", locale) {
-  const cur = normalizeCurrency(currency);
-  return `${getCurrencySymbol(cur)} ${formatCurrencyValue(value, cur, locale)}`;
 }

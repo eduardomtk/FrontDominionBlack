@@ -8,6 +8,7 @@ import { useBalance } from "@/context/BalanceContext";
 import { useTradingAuth } from "@/context/TradingAuthContext";
 import { supabase } from "@/services/supabaseClient";
 import pixLogo from "@/assets/Pix/logo_pix.png";
+import { formatCurrency, formatCurrencyValue, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -295,10 +296,15 @@ export default function WalletModal({
   const { balances, credit, debit } = useBalance();
   
   // ✅ i18n - IMPLEMENTADO
-  const { t } = useTranslation(["wallet", "common"]);
+  const { t, i18n } = useTranslation(["wallet", "common"]);
   
   // ✅ FIX micro-bug: usar profileReady para não "avaliar" regra com profile ainda hidratando
   const { profile, user, profileReady } = useTradingAuth();
+  const accountCurrency = normalizeCurrency(profile?.currency, "BRL");
+  const accountLocale = profile?.locale || i18n?.resolvedLanguage || undefined;
+  const accountCurrencySymbol = getCurrencySymbol(accountCurrency);
+  const moneyText = useCallback((value, currency = accountCurrency) => formatCurrency(value, currency, currency === accountCurrency ? accountLocale : undefined), [accountCurrency, accountLocale]);
+  const moneyValue = useCallback((value, currency = accountCurrency) => formatCurrencyValue(value, currency, currency === accountCurrency ? accountLocale : undefined), [accountCurrency, accountLocale]);
   const [tab, setTab] = useState(initialTab);
   
   // ✅ (mantido) vars usadas só fora do trading-host, se você quiser recorte "manual"
@@ -590,8 +596,12 @@ export default function WalletModal({
     return n === null ? 0 : clamp(n, 0, 999999999);
   }, [depositValue]);
 
-  const quickValues = useMemo(() => [60, 100, 200, 500, 1000, 5000, 10000, 15000], []);
-  const canDeposit = depositNumber >= MIN_DEPOSIT_BRL;
+  const quickValues = useMemo(() => {
+    if (accountCurrency === "USD") return [10, 20, 50, 100, 200, 500, 1000];
+    if (accountCurrency === "EUR") return [10, 20, 50, 100, 200, 500, 1000];
+    return [60, 100, 200, 500, 1000, 5000, 10000, 15000];
+  }, [accountCurrency]);
+  const canDeposit = accountCurrency === "BRL" ? depositNumber >= MIN_DEPOSIT_BRL : depositNumber > 0;
 
   // ==========================
   // ✅ BÔNUS APLICADO (valor recebido = depósito + bônus)
@@ -614,7 +624,7 @@ export default function WalletModal({
     if (minDep > 0 && depositNumber > 0 && depositNumber < minDep) {
       setPromoApplied(false);
       setPromoMeta(null);
-      setPromoError(`Depósito mínimo para este bônus é R$ ${formatBRL(minDep)}.`);
+      setPromoError(`Depósito mínimo para este bônus é ${moneyText(minDep)}.`);
     }
   }, [promoApplied, promoMeta, depositNumber]);
 
@@ -705,7 +715,7 @@ export default function WalletModal({
     }
     const minDep = Number(row.min_deposit) || 0;
     if (minDep > 0 && Number(amount) < minDep) {
-      throw new Error(`Depósito mínimo para este bônus é R$ ${formatBRL(minDep)}.`);
+      throw new Error(`Depósito mínimo para este bônus é ${moneyText(minDep)}.`);
     }
     if (row.usage_limit_total !== null && row.usage_limit_total !== undefined) {
       const limitTotal = Number(row.usage_limit_total);
@@ -791,6 +801,7 @@ export default function WalletModal({
       const { data, error } = await supabase.functions.invoke("mercadopago-create-pix-deposit", {
         body: {
           amount: depositNumber,
+          currency: accountCurrency,
           customer: {
             name: customerName,
             cpfCnpj: customerCpf,
@@ -823,6 +834,7 @@ export default function WalletModal({
         provider_payment_id: providerPaymentId,
         payload,
         encodedImage,
+        quote: data?.quote || null,
       });
       // Mercado Pago: snapshot do bônus já é persistido no backend na criação do depósito.
       setDepositStep(2);
@@ -1342,7 +1354,8 @@ const hasActiveBonusLock = useMemo(() => {
       : null;
     const ts = dt ? dt.getTime() : 0;
     const date = dt ? dt.toLocaleString("pt-BR") : "-";
-    const amount = toNumberSafe(r?.amount) ?? toNumberSafe(r?.amount_gross) ?? toNumberSafe(r?.value) ?? toNumberSafe(r?.total) ?? 0;
+    const amount = toNumberSafe(r?.credited_amount) ?? toNumberSafe(r?.account_amount) ?? toNumberSafe(r?.amount) ?? toNumberSafe(r?.amount_gross) ?? toNumberSafe(r?.value) ?? toNumberSafe(r?.total) ?? 0;
+    const currency = normalizeCurrency(r?.credited_currency || r?.account_currency || r?.currency || "BRL", accountCurrency);
     const method = String(r?.method || r?.payment_method || r?.pay_method || "PIX");
     const st = String(r?.status || "").toUpperCase();
     const creditedFlag = Boolean(r?.credited);
@@ -1376,7 +1389,7 @@ const hasActiveBonusLock = useMemo(() => {
     const bonusPct = getDepositBonusPercent(r);
     const hasBonus = bonusPct > 0 && (Boolean(r?.bonus_code_id) || Boolean(r?.bonus_code) || bonusPct > 0);
     const bonusAmount = hasBonus ? (Number(amount) || 0) * (bonusPct / 100) : 0;
-    return { type: "deposit", ts, date, method, amount, status: statusLabel, statusKind, hasBonus, bonusPct, bonusAmount };
+    return { type: "deposit", ts, date, method, amount, currency, status: statusLabel, statusKind, hasBonus, bonusPct, bonusAmount };
   };
 
   const mapWithdrawRow = (r) => {
@@ -1384,6 +1397,7 @@ const hasActiveBonusLock = useMemo(() => {
     const ts = dt ? dt.getTime() : 0;
     const date = dt ? dt.toLocaleString("pt-BR") : "-";
     const amount = toNumberSafe(r?.amount_gross) ?? toNumberSafe(r?.amount) ?? toNumberSafe(r?.value) ?? 0;
+    const currency = normalizeCurrency(r?.currency || accountCurrency, accountCurrency);
     const method = String(r?.method || r?.payment_method || r?.pay_method || "PIX");
     const st = String(r?.status || "").toUpperCase();
     let statusLabel = st || "-";
@@ -1412,7 +1426,7 @@ const hasActiveBonusLock = useMemo(() => {
       statusLabel = t("wallet:status.withdraw.rejected");
       statusKind = "canceled";
     }
-    return { type: "withdraw", ts, date, method, amount, status: statusLabel, statusKind };
+    return { type: "withdraw", ts, date, method, amount, currency, status: statusLabel, statusKind };
   };
 
   const mapAdminLedgerRow = (r) => {
@@ -1423,10 +1437,10 @@ const hasActiveBonusLock = useMemo(() => {
     const delta = toNumberSafe(r?.delta) ?? 0;
     const method = "PIX";
     if (kind === "ADMIN_CREDIT") {
-      return { type: "deposit", ts, date, method, amount: Math.abs(delta), status: t("wallet:status.deposit.success"), statusKind: "success" };
+      return { type: "deposit", ts, date, method, amount: Math.abs(delta), currency: normalizeCurrency(r?.currency_snapshot || accountCurrency, accountCurrency), status: t("wallet:status.deposit.success"), statusKind: "success" };
     }
     if (kind === "ADMIN_DEBIT") {
-      return { type: "withdraw", ts, date, method, amount: Math.abs(delta), status: t("wallet:status.withdraw.paid"), statusKind: "success" };
+      return { type: "withdraw", ts, date, method, amount: Math.abs(delta), currency: normalizeCurrency(r?.currency_snapshot || accountCurrency, accountCurrency), status: t("wallet:status.withdraw.paid"), statusKind: "success" };
     }
     return null;
   };
@@ -1492,6 +1506,7 @@ const hasActiveBonusLock = useMemo(() => {
       result: resultNorm,
       account_type: r?.account_type ?? null,
       created_at: r?.created_at ?? null,
+      currency: normalizeCurrency(r?.currency || accountCurrency, accountCurrency),
     };
   };
 
@@ -1509,7 +1524,7 @@ const hasActiveBonusLock = useMemo(() => {
         fetchOpsFromTradeHistory(uid, range, accountType),
         supabase
           .from("wallet_ledger")
-          .select("id,user_id,account_type,delta,kind,created_at,request_id,show_in_history,meta")
+          .select("id,user_id,account_type,delta,kind,created_at,request_id,show_in_history,meta,currency_snapshot")
           .eq("user_id", uid)
           .eq("show_in_history", true)
           .in("kind", ["ADMIN_CREDIT", "ADMIN_DEBIT"])
@@ -1626,10 +1641,10 @@ const hasActiveBonusLock = useMemo(() => {
     return { wins, losses, net };
   }, [historyKindKey, historyFiltered]);
 
-  const formatSignedBRL = (n) => {
+  const formatSignedMoney = (n, currency = accountCurrency) => {
     const num = Number.isFinite(Number(n)) ? Number(n) : 0;
     const sign = num > 0 ? "+" : num < 0 ? "-" : "";
-    return `${sign}R$ ${formatBRL(Math.abs(num))}`;
+    return `${sign}${moneyText(Math.abs(num), currency)}`;
   };
 
   // ==========================
@@ -1663,12 +1678,12 @@ const hasActiveBonusLock = useMemo(() => {
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;");
-    const money = (n) => `R$ ${formatBRL(n)}`;
+    const money = (n, currency = accountCurrency) => moneyText(n, currency);
     const headerCols = kindKey === "ops" ? [t("wallet:table.date"), t("wallet:table.method"), t("wallet:table.amount"), t("wallet:table.status")] : [t("wallet:table.date"), t("wallet:table.method"), t("wallet:table.amount"), t("wallet:table.status")];
     const renderRow = (r) => {
       const dt = esc(r.date || "-");
       const method = esc(r.method || "-");
-      const val = money(Number(r.amount) || 0);
+      const val = money(Number(r.amount) || 0, r?.currency || accountCurrency);
       const st = esc(r.status || "-");
       return `
 <tr>
@@ -2149,18 +2164,18 @@ try { window.focus(); window.print(); } catch (e) {}
                           <img src={pixLogo} alt="" className={styles.methodPixLogo} draggable={false} aria-hidden />
                           <div className={styles.methodInfo}>
                             <div className={styles.methodSub}>
-                              <div>{t("wallet:deposit.minimum")}: R$ 60,00</div>
+                              <div>{accountCurrency === "BRL" ? `${t("wallet:deposit.minimum")}: ${moneyText(MIN_DEPOSIT_BRL, "BRL")}` : `Pix mínimo: ${moneyText(MIN_DEPOSIT_BRL, "BRL")}`}</div>
                               <div>{t("wallet:deposit.processing_time")}</div>
                             </div>
                           </div>
                         </div>
                         <div className={styles.valueRow}>
-                          <div className={styles.valuePrefix}>R$</div>
+                          <div className={styles.valuePrefix}>{accountCurrencySymbol}</div>
                           <input className={styles.valueInput} value={depositValue} onChange={(e) => setDepositValue(e.target.value)} inputMode="decimal" />
                         </div>
                         {depositNumber > 0 && depositNumber < MIN_DEPOSIT_BRL ? (
                           <div style={{ marginTop: 8, fontSize: 12, opacity: 0.95, color: "#ff6b6b", fontWeight: 800 }}>
-                            Depósito mínimo: R$ {formatBRL(MIN_DEPOSIT_BRL)}.
+                            Depósito mínimo via Pix: {moneyText(MIN_DEPOSIT_BRL, "BRL")}.
                           </div>
                         ) : null}
 
@@ -2175,7 +2190,7 @@ try { window.focus(); window.print(); } catch (e) {}
                                 setDepositValue(String(v));
                               }}
                             >
-                              {formatBRL(v)}
+                              {moneyValue(v)}
                             </button>
                           ))}
                         </div>
@@ -2243,13 +2258,13 @@ try { window.focus(); window.print(); } catch (e) {}
                                 </div>
                                 <div className={styles.bonusTcBody}>
                                   <div className={styles.bonusTcItem}>
-                                    1 - {t("wallet:bonus_tc.line1_prefix", { defaultValue: "O depósito mínimo para ativar o cupom é" })} R$ {formatBRL(promoTermsModel.minDep)} {t("wallet:bonus_tc.line1_mid", { defaultValue: "e o máximo permitido é" })} R$ {formatBRL(promoTermsModel.maxDep)}.
+                                    1 - {t("wallet:bonus_tc.line1_prefix", { defaultValue: "O depósito mínimo para ativar o cupom é" })} {moneyText(promoTermsModel.minDep)} {t("wallet:bonus_tc.line1_mid", { defaultValue: "e o máximo permitido é" })} {moneyText(promoTermsModel.maxDep)}.
                                   </div>
                                   <div className={styles.bonusTcItem}>
                                     2 - {t("wallet:bonus_tc.line2_prefix", { defaultValue: "O bônus adiciona" })} {Math.round(promoTermsModel.pct)}% {t("wallet:bonus_tc.line2_suffix", { defaultValue: "do depósito ao saldo da sua conta real. Somente sendo permitido o saque do valor depositado+bônus após atingir a movimentação necessária de" })} {Math.round(promoTermsModel.rolloverX)}x {t("wallet:bonus_tc.line2_end", { defaultValue: "o valor do bônus." })}
                                   </div>
                                   <div className={styles.bonusTcItem}>
-                                    3 - {t("wallet:bonus_tc.line3_prefix", { defaultValue: "Você pode realizar o saque do bônus, após o seu volume de negócios líquido atingir" })} R$ {formatBRL(promoTermsModel.target)}.
+                                    3 - {t("wallet:bonus_tc.line3_prefix", { defaultValue: "Você pode realizar o saque do bônus, após o seu volume de negócios líquido atingir" })} {moneyText(promoTermsModel.target)}.
                                   </div>
                                   <div className={styles.bonusTcItem}>
                                     4 - {t("wallet:bonus_tc.line4", { defaultValue: "A corretora tem o direito de alterar os termos do bônus ou encerrar esta promoção a qualquer momento sem aviso prévio." })}
@@ -2278,7 +2293,7 @@ try { window.focus(); window.print(); } catch (e) {}
                         </span>
                         <span className={styles.receiveTitle}>{t("wallet:deposit.you_receive")}</span>
                       </div>
-                      <div className={styles.receiveValue}>R$ {formatBRL(receiveTotal)}</div>
+                      <div className={styles.receiveValue}>{moneyText(receiveTotal)}</div>
                       <button
                         type="button"
                         className={`${styles.depositBtn} ${!canDeposit || depositBusy ? styles.disabled : ""}`}
@@ -2308,7 +2323,7 @@ try { window.focus(); window.print(); } catch (e) {}
                         </div>
                       ) : null}
                       <div className={styles.paymentSub}>
-                        {t("wallet:deposit.deposit_correct_amount")} <b>R$ {formatBRL(depositNumber)}</b> {t("wallet:deposit.to_key")}:
+                        {t("wallet:deposit.deposit_correct_amount")} <b>{moneyText(depositInfo?.quote?.pixAmountBrl ?? depositNumber, "BRL")}</b> {t("wallet:deposit.to_key")}:
                       </div>
                       <div
                         className={styles.qrBox}
@@ -2481,18 +2496,18 @@ try { window.focus(); window.print(); } catch (e) {}
                         ) : null}
                         <div className={styles.withdrawCard}>
                           <div className={styles.withdrawCardLabel}>{t("wallet:withdraw.available")}</div>
-                          <div className={styles.withdrawCardValue}>R$ {formatBRL(withdrawableCash)}</div>
+                          <div className={styles.withdrawCardValue}>{moneyText(withdrawableCash)}</div>
                         </div>
 
                         {lockedCash > 0 ? (
                           <div className={styles.withdrawCard}>
                             <div className={styles.withdrawCardLabel}>Bloqueado:</div>
-                            <div className={styles.withdrawCardValue}>R$ {formatBRL(lockedCash)}</div>
+                            <div className={styles.withdrawCardValue}>{moneyText(lockedCash)}</div>
                           </div>
                         ) : null}
                         <div className={styles.withdrawCard}>
                           <div className={styles.withdrawCardLabel}>{t("wallet:withdraw.bonus")}</div>
-                          <div className={styles.withdrawCardValue}>R$ {formatBRL(liveBonusBucket)}</div>
+                          <div className={styles.withdrawCardValue}>{moneyText(liveBonusBucket)}</div>
                         </div>
                         <div className={styles.withdrawCard}>
                           <div className={styles.withdrawCardLabel}>{t("wallet:withdraw.fee")}</div>
@@ -2519,7 +2534,7 @@ try { window.focus(); window.print(); } catch (e) {}
                         <div className={styles.withdrawField}>
                           <div className={styles.withdrawFieldLabel}>{t("wallet:withdraw.amount_label")}</div>
                           <div className={styles.valueRow}>
-                            <div className={styles.valuePrefix}>R$</div>
+                            <div className={styles.valuePrefix}>{accountCurrencySymbol}</div>
                             <input
                               className={`${styles.valueInput} ${styles.withdrawFullInput}`}
                               value={withdrawValue}
@@ -2534,7 +2549,7 @@ try { window.focus(); window.print(); } catch (e) {}
                             />
                           </div>
                           {withdrawNumber > 0 && withdrawNumber < MIN_WITHDRAW_BRL ? (
-                            <div className={styles.withdrawWarn}>Saque mínimo: R$ {formatBRL(MIN_WITHDRAW_BRL)}.</div>
+                            <div className={styles.withdrawWarn}>Saque mínimo: {moneyText(MIN_WITHDRAW_BRL)}.</div>
                           ) : null}
                           {withdrawNumber > 0 && totalDebit > available ? <div className={styles.withdrawWarn}>{t("wallet:withdraw.above_available")}</div> : null}
                         </div>
@@ -2579,7 +2594,7 @@ try { window.focus(); window.print(); } catch (e) {}
                           {withdrawBusy ? t("wallet:withdraw.requesting") : t("wallet:withdraw.request")}
                         </button>
                         <div className={styles.withdrawMeta}>
-                          {t("wallet:withdraw.meta_fee")}: <b>R$ {formatBRL(feeValue)}</b> • {t("wallet:withdraw.meta_receive")}: <b>R$ {formatBRL(netReceive)}</b> • {t("wallet:withdraw.meta_debit")}: <b>R$ {formatBRL(totalDebit)}</b>
+                          {t("wallet:withdraw.meta_fee")}: <b>{moneyText(feeValue)}</b> • {t("wallet:withdraw.meta_receive")}: <b>{moneyText(netReceive)}</b> • {t("wallet:withdraw.meta_debit")}: <b>{moneyText(totalDebit)}</b>
                         </div>
                       </div>
                     </div>
@@ -2720,8 +2735,8 @@ try { window.focus(); window.print(); } catch (e) {}
                         const methodRaw = String(h?.method || "-");
                         const isPixMethod = isDeposit && String(methodRaw || "").toUpperCase().includes("PIX");
                         // ✅ valor (depósito com bônus): mostra + bônus ao lado
-                        const baseAmount = h?.amount != null ? `R$ ${formatBRL(h.amount)}` : "-";
-                        const bonusAmountText = hasBonus ? `R$ ${formatBRL(Number(h.bonusAmount) || 0)}` : "";
+                        const baseAmount = h?.amount != null ? moneyText(h.amount, h?.currency || accountCurrency) : "-";
+                        const bonusAmountText = hasBonus ? moneyText(Number(h.bonusAmount) || 0, h?.currency || accountCurrency) : "";
                         return (
                           <div key={idx} className={styles.tr}>
                             <div>{h.date || "-"}</div>
@@ -2777,7 +2792,7 @@ try { window.focus(); window.print(); } catch (e) {}
                         <div className={styles.historyOpsSummaryLeft}>
                           <div className={styles.historyOpsSummaryTitle}>{t("wallet:history.period_result")}</div>
                           <div className={styles.historyOpsSummaryMeta}>
-                            {t("wallet:history.wins")}: <b>R$ {formatBRL(opsSummary.wins)}</b> • {t("wallet:history.losses")}: <b>R$ {formatBRL(opsSummary.losses)}</b>
+                            {t("wallet:history.wins")}: <b>{moneyText(opsSummary.wins)}</b> • {t("wallet:history.losses")}: <b>{moneyText(opsSummary.losses)}</b>
                           </div>
                         </div>
                         <div
@@ -2785,7 +2800,7 @@ try { window.focus(); window.print(); } catch (e) {}
                             opsSummary.net > 0 ? styles.historyOpsSummaryWin : opsSummary.net < 0 ? styles.historyOpsSummaryLoss : ""
                           }`}
                         >
-                          {formatSignedBRL(opsSummary.net)}
+                          {formatSignedMoney(opsSummary.net)}
                         </div>
                       </div>
                     ) : null}

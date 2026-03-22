@@ -16,6 +16,7 @@ import { useMarketStore } from "@/stores/market.store";
 import ProfilePanel from "@/components/Chart/ChartWorkspace/ProfilePanel/ProfilePanel";
 import ProfileModal from "@/components/WalletModal/ProfileModal";
 import { useTradingAuth } from "@/context/TradingAuthContext";
+import { formatCurrency, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
 
 // ✅ i18n
 import { useTranslation } from "react-i18next";
@@ -102,6 +103,8 @@ const Header = ({ pairPanelRef, onOpenWallet }) => {
   const navigate = useNavigate();
 
   const { signOut, user: authUser, profile, avatarUrl } = useTradingAuth();
+  const profileCurrency = normalizeCurrency(profile?.currency, "BRL");
+  const profileLocale = profile?.locale || undefined;
 
   const { accountType, accountReady, switchAccount } = useAccount();
 
@@ -702,11 +705,10 @@ const Header = ({ pairPanelRef, onOpenWallet }) => {
   const demoBal = getDemoBalance();
 
   const fmtOrDash = (v) => {
-    if (isBalanceHidden) return t("header:money_hidden", { defaultValue: "R$ *****" });
-    if (!Number.isFinite(Number(v))) return t("header:money_dash", { defaultValue: "R$ —" });
-
-    const prefix = t("header:money_prefix", { defaultValue: "R$" });
-    return `${prefix} ${formatBRL(round2(Number(v)))}`;
+    const symbol = getCurrencySymbol(profileCurrency);
+    if (isBalanceHidden) return `${symbol} *****`;
+    if (!Number.isFinite(Number(v))) return `${symbol} —`;
+    return formatCurrency(round2(Number(v)), profileCurrency, profileLocale);
   };
 
   const balanceClass = accountType === "DEMO" ? styles.balanceDemo : styles.balanceValue;
@@ -722,8 +724,8 @@ const Header = ({ pairPanelRef, onOpenWallet }) => {
       : "";
 
   const headerBalanceText = isBalanceHidden
-    ? t("header:money_hidden", { defaultValue: "R$ *****" })
-    : `${t("header:money_prefix", { defaultValue: "R$" })} ${formatBRL(displayBalance)}`;
+    ? `${getCurrencySymbol(profileCurrency)} *****`
+    : formatCurrency(displayBalance, profileCurrency, profileLocale);
 
   const openProfileModal = (initial = "perfil") => {
     setProfileOpen(false);
