@@ -14,8 +14,6 @@ import SoundManager from "@/sound/SoundManager.js";
 import { useMarketConfigs } from "@/context/MarketConfigContext";
 import { useMaintenance } from "@/context/MaintenanceContext";
 import { useTranslation } from "react-i18next";
-import { useTradingAuth } from "@/context/TradingAuthContext";
-import { formatCurrency, formatCurrencyValue, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
 
 const EXPIRATION_SECONDS = {
   M1: 60,
@@ -69,13 +67,8 @@ function calcAlignedExpiryMs(nowMs, tfMs, minLeadMs) {
   const bucketStartMs = Math.floor(t / tf) * tf;
   let closeMs = bucketStartMs + tf;
   const remainingMs = closeMs - t;
-  const remainingWholeSeconds = Math.max(0, Math.floor(remainingMs / 1000));
-  const leadWholeSeconds = Math.max(0, Math.floor(lead / 1000));
 
-  // ✅ Regra da corretora:
-  // - enquanto o cronômetro ainda mostra 31, continua na vela atual
-  // - no primeiro instante em que passa a mostrar 30.xxx, já vai para a próxima vela
-  if (remainingWholeSeconds <= leadWholeSeconds) {
+  if (remainingMs <= lead) {
     closeMs += tf;
   }
 
@@ -256,12 +249,8 @@ function getPairIconSrc(raw) {
 }
 
 const RightTradePanel = ({ onHoverAction }) => {
-  const { t, i18n } = useTranslation(["trade", "common"]);
+  const { t } = useTranslation(["trade", "common"]);
   const { t: tTradeHistory } = useTranslation("tradeHistory");
-  const { profile } = useTradingAuth();
-  const accountCurrency = normalizeCurrency(profile?.currency, "BRL");
-  const accountLocale = profile?.locale || i18n?.resolvedLanguage || undefined;
-  const currencySymbol = getCurrencySymbol(accountCurrency);
 
   const [time, setTime] = useState("M1");
   const [amount, setAmount] = useState(DEFAULT_AMOUNT);
@@ -331,29 +320,41 @@ const RightTradePanel = ({ onHoverAction }) => {
 
   const profit = amtFinite * payout;
 
-  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
+  const clockRef = useRef({
+    lastServerMs: null,
+    lastLocalMs: null,
+  });
 
-  function getNowMsSoberano() {
-    try {
-      const now = Number(getServerNowMs?.());
-      if (Number.isFinite(now) && now > 0) return now;
-    } catch {}
-
+  useMemo(() => {
     const lt = pairData?.lastTick;
     const ms1 = toMsMaybe(lt?.serverTime);
     const ms2 = toMsMaybe(lt?.time ?? lt?.t);
-    const fallback = Number.isFinite(ms1) ? ms1 : Number.isFinite(ms2) ? ms2 : null;
-    if (Number.isFinite(fallback)) return fallback;
+    const serverMs = Number.isFinite(ms1) ? ms1 : Number.isFinite(ms2) ? ms2 : null;
 
-    return Date.now();
+    if (Number.isFinite(serverMs)) {
+      clockRef.current.lastServerMs = serverMs;
+      clockRef.current.lastLocalMs = Date.now();
+    }
+  }, [pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
+
+  function getNowMsSoberano() {
+    const localNow = Date.now();
+    const { lastServerMs, lastLocalMs } = clockRef.current;
+
+    if (Number.isFinite(lastServerMs) && Number.isFinite(lastLocalMs)) {
+      const projected = Number(lastServerMs) + (localNow - Number(lastLocalMs));
+      return Math.max(projected, lastServerMs);
+    }
+
+    return localNow;
   }
 
   useEffect(() => {
     const tick = () => setCountdownNow(getNowMsSoberano());
     tick();
-    const id = window.setInterval(tick, 200);
+    const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [time, getServerNowMs, pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
+  }, [time, pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
 
   const countdownLabel = useMemo(() => {
     const tfSec = EXPIRATION_SECONDS[time] || 60;
@@ -556,8 +557,8 @@ const RightTradePanel = ({ onHoverAction }) => {
             <div className={styles.percentageText}>+{Math.round(payout * 100)}%</div>
           </div>
           <div className={styles.profitDisplay}>
-            <span className={styles.currencySymbol}>{currencySymbol}</span>
-            <span className={styles.profitAmount}>{formatCurrencyValue(profit, accountCurrency, accountLocale)}</span>
+            <span className={styles.currencySymbol}>R$</span>
+            <span className={styles.profitAmount}>{profit.toFixed(2)}</span>
           </div>
         </div>
 
@@ -768,10 +769,8 @@ const RightTradePanel = ({ onHoverAction }) => {
                   const iconSrc = getPairIconSrc(rawAsset);
                   const isCall = tradeItem.direction === "CALL";
 
-                  const amountText = `${isWin ? "+" : "-"} ${formatCurrency(
-                    Math.abs(isWin ? profitValue : tradeItem.amount),
-                    accountCurrency,
-                    accountLocale,
+                  const amountText = `${isWin ? "+" : "-"} R$ ${formatBRL(
+                    Math.abs(isWin ? profitValue : tradeItem.amount)
                   )}`;
 
                   return (
@@ -814,7 +813,7 @@ const RightTradePanel = ({ onHoverAction }) => {
                         </div>
                         <div className={styles.mobileHistoryMeta}>
                           <span className={styles.mobileHistoryArrow}>{isCall ? "▴" : "▾"}</span>
-                          <span className={styles.mobileHistoryStake}>{formatCurrency(tradeItem.amount, accountCurrency, accountLocale)}</span>
+                          <span className={styles.mobileHistoryStake}>R$ {formatBRL(tradeItem.amount)}</span>
                         </div>
                       </div>
                     </div>

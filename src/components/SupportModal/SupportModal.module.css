@@ -131,10 +131,10 @@
   display: inline-flex;
   align-items: center;
 
-  font-size: 30px;
-  transform: translateY(0.5px) scale(0.94);
+  font-size: 22px;
+  transform: translateY(0.5px) scale(0.82);
   transform-origin: center;
-  margin-left: -2px;
+  margin-left: -6px;
 
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
@@ -145,9 +145,9 @@
   display: inline-flex;
   align-items: center;
 
-  font-size: 30px;
+  font-size: 22px;
 
-  transform: translateY(0.5px) scale(0.94);
+  transform: translateY(0.5px) scale(0.82);
   transform-origin: center;
 
   margin-left: -1px;

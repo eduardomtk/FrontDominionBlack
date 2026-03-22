@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { supabase, getPublicAvatarUrl } from "../services/supabaseClient";
 import { getCountriesSorted } from "@/data/countries";
-import { normalizeCurrency } from "@/utils/currency";
 
 // ✅ locale helpers
 import { getLocale as getStoredLocale, setLocale as setStoredLocale, localeFromCountry } from "@/i18n/locale";
@@ -25,20 +24,6 @@ function safeJsonParse(v) {
 function normalizeLocale(v, fallback = "pt-BR") {
   const s = String(v || "").trim();
   return s || fallback;
-}
-
-function buildProfileBootstrap(input = {}) {
-  const countryCode = String(input.country_code || input.countryCode || "").trim().toUpperCase() || null;
-  const locale = normalizeLocale(input.locale || (countryCode ? localeFromCountry(countryCode) : null), "pt-BR");
-  const currency = normalizeCurrency(input.currency, "BRL");
-  const country = String(input.country || "").trim() || null;
-
-  return {
-    ...(country ? { country } : {}),
-    ...(countryCode ? { country_code: countryCode } : {}),
-    ...(currency ? { currency } : {}),
-    ...(locale ? { locale } : {}),
-  };
 }
 
 // ✅ NOVO: resolve countryName ("Brasil") -> countryCode ("BR")
@@ -79,20 +64,6 @@ export function TradingAuthProvider({ children }) {
   // ✅ evita loop de persist locale (polling/realtime)
   const localePersistRef = useRef({ uid: null, locale: null });
 
-  const persistBootstrapPrefs = useCallback((bootstrap = {}) => {
-    const countryCode = String(bootstrap?.country_code || bootstrap?.countryCode || "").trim().toUpperCase();
-    const currency = normalizeCurrency(bootstrap?.currency, "BRL");
-    if (!countryCode && !currency) return;
-    try {
-      const prev = safeJsonParse(localStorage.getItem("tp_prefs")) || {};
-      localStorage.setItem("tp_prefs", JSON.stringify({
-        ...prev,
-        ...(countryCode ? { country: countryCode } : {}),
-        ...(currency ? { currency } : {}),
-      }));
-    } catch {}
-  }, []);
-
   const mergeAuthEmailIntoProfile = useCallback((profileRow, authEmail) => {
     if (!profileRow) return null;
     const e = authEmail ? String(authEmail).trim().toLowerCase() : null;
@@ -106,38 +77,6 @@ export function TradingAuthProvider({ children }) {
       localStorage.setItem(profileCacheKey(uid), JSON.stringify(row));
     } catch {}
   }, []);
-
-
-  const upsertProfileByUid = useCallback(async (uid, partial, authEmail = null) => {
-    if (!uid) return { data: null, error: new Error("Missing uid") };
-
-    try {
-      const payload = { id: uid, ...partial };
-      if ("email" in payload) delete payload.email;
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .upsert(payload, { onConflict: "id" })
-        .select("*")
-        .maybeSingle();
-
-      if (error) return { data: null, error };
-
-      const merged = mergeAuthEmailIntoProfile(data ?? null, authEmail);
-      if (merged?.locale) {
-        try {
-          setStoredLocale(normalizeLocale(merged.locale, "pt-BR"));
-        } catch {}
-      }
-      if (uid === user?.id) {
-        setProfile(merged);
-        writeProfileCache(uid, merged);
-      }
-      return { data: merged, error: null };
-    } catch (e) {
-      return { data: null, error: e };
-    }
-  }, [mergeAuthEmailIntoProfile, user?.id, writeProfileCache]);
 
   const readProfileCache = useCallback((uid) => {
     if (!uid) return null;
@@ -183,7 +122,6 @@ export function TradingAuthProvider({ children }) {
       // 🚀 BOOTSTRAP COM PREFS DO GOOGLE
       if (!data) {
         let countryName = null;
-        let countryCode = null;
         let currency = null;
 
         // ✅ locale (derivado do prefs.country code)
@@ -192,20 +130,12 @@ export function TradingAuthProvider({ children }) {
         try {
           const prefs = safeJsonParse(localStorage.getItem("tp_prefs"));
           if (prefs?.country) {
-            countryCode = String(prefs.country).trim().toUpperCase();
             const countries = getCountriesSorted({ prioritizeBR: true });
-            countryName = countries.find((c) => c.code === countryCode)?.name || null;
-            locale = normalizeLocale(localeFromCountry(countryCode), null);
+            countryName = countries.find((c) => c.code === prefs.country)?.name || null;
+            locale = normalizeLocale(localeFromCountry(prefs.country), null);
           }
-          currency = prefs?.currency ? normalizeCurrency(prefs.currency, null) : null;
+          currency = prefs?.currency || null;
         } catch {}
-
-        const userMeta = user?.user_metadata || {};
-        if (!countryCode && userMeta?.country_code) countryCode = String(userMeta.country_code).trim().toUpperCase();
-        if (!countryName && userMeta?.country) countryName = String(userMeta.country).trim() || null;
-        if (!currency && userMeta?.currency) currency = normalizeCurrency(userMeta.currency, null);
-        if (!locale && userMeta?.locale) locale = normalizeLocale(userMeta.locale, null);
-        if (!locale && countryCode) locale = normalizeLocale(localeFromCountry(countryCode), null);
 
         // ✅ fallback final para locale
         if (!locale) {
@@ -221,7 +151,6 @@ export function TradingAuthProvider({ children }) {
           id: uid,
           email: authEmail,
           ...(countryName ? { country: countryName } : {}),
-          ...(countryCode ? { country_code: countryCode } : {}),
           ...(currency ? { currency } : {}),
           ...(locale ? { locale } : {}),
         };
@@ -509,38 +438,14 @@ export function TradingAuthProvider({ children }) {
 
     const options = (isObj ? passwordMaybe : optionsMaybe) || {};
     const autoSignIn = options.autoSignIn !== false;
-    const bootstrapProfile = buildProfileBootstrap(options.profile || options.bootstrapProfile || {});
 
-    persistBootstrapPrefs(bootstrapProfile);
-
-    const signUpPayload = {
-      email,
-      password,
-      options: {
-        data: {
-          ...bootstrapProfile,
-        },
-      },
-    };
-
-    const { data, error } = await supabase.auth.signUp(signUpPayload);
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) return { data: null, error };
-
-    const authUser = data?.user ?? null;
-    if (authUser?.id) {
-      await upsertProfileByUid(authUser.id, bootstrapProfile, authUser?.email || email || null);
-    }
 
     if (!autoSignIn) return { data, error: null };
 
     const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
     if (signInErr) return { data, error: signInErr };
-
-    const signedUser = signInData?.user ?? signInData?.session?.user ?? authUser;
-    if (signedUser?.id) {
-      await upsertProfileByUid(signedUser.id, bootstrapProfile, signedUser?.email || email || null);
-      await refreshProfile();
-    }
     return { data: signInData, error: null };
   }
 

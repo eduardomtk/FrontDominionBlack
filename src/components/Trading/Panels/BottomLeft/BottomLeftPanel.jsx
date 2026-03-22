@@ -11,7 +11,7 @@ const EXPIRATION_SECONDS = {
   M15: 900,
 };
 
-// ✅ Regra: enquanto ainda mostra 31s fica na vela atual; no primeiro 30.xxx vai para a próxima
+// ✅ Regra: se faltar <= 30s pro fechamento, expira no PRÓXIMO fechamento
 const MIN_LEAD_SECONDS = 30;
 
 function normalizePair(pair) {
@@ -24,29 +24,27 @@ function normalizeTf(tf) {
   return "M1";
 }
 
-function toMsMaybe(v) {
+function toSecMaybe(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
-  return n > 1e11 ? n : n * 1000;
+  return n > 1e11 ? Math.floor(n / 1000) : Math.floor(n);
 }
 
-function calcAlignedExpiryMs(nowMs, tfSec, minLeadSec = MIN_LEAD_SECONDS) {
-  const t = Number(nowMs);
+function calcAlignedExpiryMs(nowSec, tfSec, minLeadSec = MIN_LEAD_SECONDS) {
+  const t = Number(nowSec);
   const tf = Number(tfSec);
 
   if (!Number.isFinite(t) || !Number.isFinite(tf) || tf <= 0) {
     return Date.now() + 60_000;
   }
 
-  const tfMs = tf * 1000;
-  const bucketStartMs = Math.floor(t / tfMs) * tfMs;
-  let closeMs = bucketStartMs + tfMs;
+  const bucketStart = Math.floor(t / tf) * tf;
+  let closeSec = bucketStart + tf;
 
-  const remainingMs = closeMs - t;
-  const remainingWholeSeconds = Math.max(0, Math.floor(remainingMs / 1000));
-  if (remainingWholeSeconds <= minLeadSec) closeMs += tfMs;
+  const remaining = closeSec - t;
+  if (remaining <= minLeadSec) closeSec += tf;
 
-  return closeMs;
+  return closeSec * 1000;
 }
 
 export default function BottomLeftPanel() {
@@ -96,23 +94,16 @@ export default function BottomLeftPanel() {
     return payoutMap[symbol] || 0.7;
   }, [symbol]);
 
-  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
-
-  function getNowMsSoberano() {
-    try {
-      const now = Number(getServerNowMs?.());
-      if (Number.isFinite(now) && now > 0) return now;
-    } catch {}
-
+  function getNowSecSoberano() {
     const lt = pairData?.lastTick;
 
-    const s1 = toMsMaybe(lt?.serverTime);
-    if (Number.isFinite(s1)) return s1;
+    const s1 = toSecMaybe(lt?.serverTime);
+    if (s1) return s1;
 
-    const s2 = toMsMaybe(lt?.time ?? lt?.t);
-    if (Number.isFinite(s2)) return s2;
+    const s2 = toSecMaybe(lt?.time ?? lt?.t);
+    if (s2) return s2;
 
-    return Date.now();
+    return Math.floor(Date.now() / 1000);
   }
 
   function fire(direction) {
@@ -134,16 +125,15 @@ export default function BottomLeftPanel() {
       return;
     }
 
-    const nowMs = getNowMsSoberano();
+    const nowSec = getNowSecSoberano();
 
     // ✅ trava “múltiplos por bug” no mesmo segundo
-    const nowWholeSec = Math.floor(nowMs / 1000);
-    if (lastFireSecRef.current === nowWholeSec) return;
-    lastFireSecRef.current = nowWholeSec;
+    if (lastFireSecRef.current === nowSec) return;
+    lastFireSecRef.current = nowSec;
 
     // ✅ BottomLeft é atalho: expiração padrão M1, mas alinhada ao fechamento
     const tfSec = EXPIRATION_SECONDS.M1;
-    const expirationTime = calcAlignedExpiryMs(nowMs, tfSec, MIN_LEAD_SECONDS);
+    const expirationTime = calcAlignedExpiryMs(nowSec, tfSec, MIN_LEAD_SECONDS);
 
     openTrade({
       direction,

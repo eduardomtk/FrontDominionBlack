@@ -1,50 +1,75 @@
+/* RESET PADRÃO PROFISSIONAL */
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Inter, sans-serif;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif; /* Fonte padrão de corretoras profissionais */
 }
 
-html,
-body,
+body, html, #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #0b0f14; /* Cor de fallback caso a imagem falhe */
+}
+
+/* CONTAINER PRINCIPAL COM A IMAGEM DE FUNDO (PADRÃO ONBROKER) */
 #root {
-  width: 100%;
-  min-height: 100%;
-  height: 100%;
+    background-image: url('./assets/images/bg-login.jpg'); /* Certifique-se que o caminho está correto */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
 }
 
-body {
-  background: #020617;
-  color: #e5e7eb;
+/* CAMADA DE CONTRASTE (OVERLAY) 
+   Isso garante que o gráfico seja legível e a logo TradePro ao fundo fique sutil */
+#root::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(11, 15, 20, 0.6) 0%, rgba(11, 15, 20, 0.9) 100%);
+    z-index: 0;
+    pointer-events: none;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* GARANTE QUE O CONTEÚDO (GRÁFICO/UI) FIQUE ACIMA DO FUNDO */
+#root > div {
+    position: relative;
+    z-index: 1;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+/* 🚫 BLOQUEIO DEFINITIVO — REMOÇÃO TOTAL DE MARCAS EXTERNAS */
+iframe[src*="tradingview"],
+a[href*="tradingview"],
+div[id*="tradingview"],
+.tv-logo,
+.tv-watermark,
+.tv-widget-logo,
+.tv-lightweight-charts-watermark,
+span[class*="tradingview"] {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
-/* Scrollbar dark */
+/* SCROLLBAR CUSTOMIZADA (ESTILO DARK BROKER) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+    width: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0f172a;
+    background: #0b0f14;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 999px;
+    background: #1f2a38;
+    border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+    background: #2a3e59;
 }
