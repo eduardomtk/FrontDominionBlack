@@ -1,0 +1,131 @@
+.panel {
+  margin-top: 0px;
+  background: linear-gradient(180deg, #0c1320, #0a101b);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: inset 0 0 0 1px rgba(0, 255, 170, 0.08);
+  max-height: 180px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #7fffd4;
+  margin-bottom: 8px;
+  text-align: center;
+  opacity: 0.85;
+  flex-shrink: 0;
+}
+
+.tradeList {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tradeList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tradeList::-webkit-scrollbar-thumb {
+  background: rgba(127, 255, 212, 0.35);
+  border-radius: 4px;
+}
+
+.tradeList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tradeCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.tradeCard:last-child {
+  margin-bottom: 0;
+}
+
+.call {
+  border-left: 3px solid #00ff9d;
+}
+
+.put {
+  border-left: 3px solid #ff4d4d;
+}
+
+.left {
+  display: flex;
+  flex-direction: column;
+}
+
+.direction {
+  font-weight: 700;
+  color: #e5e7eb;
+}
+
+.amount {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.center {
+  font-size: 11px;
+  color: #cbd5f5;
+}
+
+.right {
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.timer {
+  min-width: 44px;
+  text-align: right;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .panel {
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    max-height: 170px;
+  }
+
+  .header {
+    display: none;
+  }
+
+  .tradeList {
+    padding-right: 2px;
+  }
+
+  .tradeCard {
+    border-radius: 8px;
+    padding: 8px 9px;
+    margin-bottom: 6px;
+    font-size: 11px;
+    background: rgba(15, 23, 42, 0.92);
+  }
+
+  .direction {
+    font-size: 10px;
+  }
+
+  .amount,
+  .center,
+  .timer {
+    font-size: 10px;
+  }
+
+  .timer {
+    min-width: 40px;
+  }
+}

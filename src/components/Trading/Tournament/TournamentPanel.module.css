@@ -1,0 +1,229 @@
+/* ================= BACKDROP ================= */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================= PANEL ================= */
+.panel {
+  position: relative;
+  width: 900px;
+  max-width: 95vw;
+  max-height: 90vh;
+  background: #0b0f1a;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  z-index: 10001;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+
+  /* 🔒 BLINDAGEM ABSOLUTA */
+  color: #e5e7eb;
+}
+
+/* ================= HEADER ================= */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header button {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* ================= GRID ================= */
+.grid {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* ================= CARD ================= */
+.card {
+  position: relative;
+  background: #0f1629;
+  border-radius: 12px;
+  padding: 38px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+
+  /* 🔒 BLINDAGEM */
+  color: #e5e7eb;
+}
+
+.cardTitle {
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.time {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+/* ================= STATUS ================= */
+.status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.running {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.upcoming {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.finished {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ================= RANKING ================= */
+.ranking {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+}
+
+.ranking li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 6px 0;
+
+  /* 🔒 GARANTIA */
+  color: #e5e7eb;
+}
+
+.ranking li strong {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.ranking li img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.locked {
+  opacity: 0.6;
+}
+
+/* ================= FOOTER ================= */
+.footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
+  /* 🔒 */
+  color: #e5e7eb;
+}
+
+.historyBtn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ================= ANIMAÇÕES ================= */
+
+/* Movimento ranking */
+.up {
+  animation: rise 0.35s ease;
+}
+
+.down {
+  animation: fall 0.35s ease;
+}
+
+@keyframes rise {
+  0% {
+    background: rgba(34, 197, 94, 0.18);
+    transform: translateY(6px);
+  }
+  100% {
+    background: transparent;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fall {
+  0% {
+    background: rgba(239, 68, 68, 0.18);
+    transform: translateY(-6px);
+  }
+  100% {
+    background: transparent;
+    transform: translateY(0);
+  }
+}
+
+/* Flash de saldo */
+.gain strong {
+  animation: gainFlash 0.6s ease;
+}
+
+.loss strong {
+  animation: lossFlash 0.6s ease;
+}
+
+@keyframes gainFlash {
+  0% {
+    color: #22c55e;
+  }
+  100% {
+    color: #4ade80;
+  }
+}
+
+@keyframes lossFlash {
+  0% {
+    color: #ef4444;
+  }
+  100% {
+    color: #f87171;
+  }
+}

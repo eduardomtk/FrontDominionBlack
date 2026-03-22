@@ -1,0 +1,35 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependências e build
+node_modules/
+dist/
+dist-ssr/
+
+# Variáveis de ambiente / segredos
+.env
+.env.*
+*.local
+
+# Backend local / MT4 / bridge / edge functions
+backend/
+supabase/
+start-mt4.js
+
+# Sistema / editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

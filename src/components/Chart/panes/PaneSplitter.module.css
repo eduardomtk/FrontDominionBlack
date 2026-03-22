@@ -1,0 +1,78 @@
+/* src/chart/panes/PaneSplitter.module.css */
+
+.splitter {
+  /* ✅ NÃO cria faixa/gap visual */
+  height: 0;
+
+  /* Mantém comportamento */
+  position: relative;
+  z-index: 10;
+
+  user-select: none;
+  touch-action: none;
+
+  /* Segurança: não pinta nada */
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* ✅ Hit-area real (pegável) SEM criar faixa visual */
+.splitter::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+
+  /* 8px de área útil, centralizada no "limite" entre panes */
+  top: -4px;
+  height: 8px;
+
+  cursor: row-resize;
+
+  /* Não desenha faixa por padrão */
+  background: transparent;
+  border-radius: 6px;
+
+  /* Transição suave e profissional */
+  transition: background 140ms ease;
+}
+
+/* ✅ Linha fina exatamente no limite entre panes (visual) */
+.splitter::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 0;
+  height: 1px;
+
+  background: rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+
+  transition: background 140ms ease;
+}
+
+/* ✅ Hover: “fundinho” translúcido como corretora */
+.splitter:hover::before {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Hover reforça discretamente a linha */
+.splitter:hover::after {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* Estado disabled */
+.splitter[data-disabled="1"]::before {
+  cursor: default;
+}
+
+.splitter[data-disabled="1"]::after {
+  opacity: 0.35;
+}
+
+.splitter[data-disabled="1"]:hover::before {
+  background: transparent;
+}

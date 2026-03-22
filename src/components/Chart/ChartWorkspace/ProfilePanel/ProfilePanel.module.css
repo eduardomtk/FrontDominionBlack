@@ -1,0 +1,270 @@
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+}
+
+.panel {
+  position: absolute;
+  right: 16px;
+  top: 70px;
+
+  /* ✅ desktop preservado */
+  width: 230px;
+  max-width: calc(100vw - 24px);
+
+  pointer-events: auto;
+
+  background: rgba(18, 22, 30, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 14px;
+
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  overflow: hidden;
+
+  transform-origin: top right;
+  animation: popIn 140ms ease-out;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 10px 12px;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  overflow: hidden;
+}
+
+.avatarInner {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ✅ avatar real */
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 999px;
+  display: block;
+}
+
+.userBlock {
+  min-width: 0;
+  flex: 1;
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMeta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closeBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border 120ms ease;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.menu {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  width: 100%;
+  border: 0;
+  outline: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 10px;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease, border 120ms ease;
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  transform: translateY(-1px);
+}
+
+.itemIcon {
+  width: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.95;
+}
+
+.itemLabel {
+  flex: 1;
+  text-align: left;
+
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemArrow {
+  opacity: 0.55;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 16px;
+  transform: translateY(-1px);
+}
+
+.footer {
+  padding: 8px;
+}
+
+.logout {
+  width: 100%;
+  border: 0;
+  outline: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 10px 10px;
+  border-radius: 12px;
+
+  cursor: pointer;
+
+  background: rgba(255, 70, 70, 0.10);
+  border: 1px solid rgba(255, 70, 70, 0.18);
+  color: rgba(255, 255, 255, 0.92);
+
+  transition: transform 120ms ease, background 120ms ease, border 120ms ease;
+}
+
+.logout:hover {
+  background: rgba(255, 70, 70, 0.16);
+  border: 1px solid rgba(255, 70, 70, 0.24);
+  transform: translateY(-1px);
+}
+
+/* ✅ ajuste somente mobile */
+@media (max-width: 768px) {
+  .panel {
+    width: 132px;
+    max-width: calc(100vw - 16px);
+    border-radius: 12px;
+    transform-origin: top left;
+  }
+
+  .header {
+    display: none;
+  }
+
+  .menu {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .item {
+    gap: 8px;
+    padding: 8px 8px;
+    min-height: 34px;
+    border-radius: 10px;
+  }
+
+  .itemIcon {
+    width: 16px;
+    font-size: 12px;
+  }
+
+  .itemLabel {
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .itemArrow {
+    font-size: 13px;
+  }
+
+  .footer {
+    padding: 6px;
+  }
+
+  .logout {
+    gap: 8px;
+    padding: 8px 8px;
+    min-height: 34px;
+    border-radius: 10px;
+  }
+}

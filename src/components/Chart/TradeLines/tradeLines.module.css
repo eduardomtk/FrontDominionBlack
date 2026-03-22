@@ -1,0 +1,68 @@
+.tradeLabel {
+  position: absolute;
+  top: 0;
+  right: 0px;
+  pointer-events: none;
+  z-index: 100;
+  will-change: transform;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+
+  /* ✅ menor (antes: 11px) */
+  font-size: 9px;
+
+  color: #ffffff;
+  border: 1px solid var(--bg-color);
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.amount {
+  background: var(--bg-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  /* ✅ menor (antes: 20px) */
+  height: 15px;
+
+  /* ✅ mantém legível, menor (antes: 42px) */
+  min-width: 36px;
+
+  /* ✅ padding menor (antes: 0 6px) */
+  padding: 0 5px;
+
+  box-sizing: border-box;
+}
+
+.timer {
+  background: rgba(20, 20, 20, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* ✅ menor (antes: 20px) */
+  height: 2px;
+
+  /* ✅ menor (antes: 40px) */
+  min-width: 32px;
+
+  /* ✅ padding menor (antes: 0 4px) */
+  padding: 0 4px;
+
+  box-sizing: border-box;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  text-align: center;
+}

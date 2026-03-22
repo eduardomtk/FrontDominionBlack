@@ -1,0 +1,29 @@
+.panel {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+}
+
+.button {
+  background: #1e1e1e;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.button:hover {
+  background: #333;
+}
+
+.active {
+  background: #00c853;
+  color: #000;
+  border-color: #00c853;
+}

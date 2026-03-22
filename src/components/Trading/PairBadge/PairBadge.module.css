@@ -1,0 +1,22 @@
+.badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+
+  padding: 6px 14px;
+  border-radius: 6px;
+
+  background: rgba(20, 25, 34, 0.85);
+  backdrop-filter: blur(6px);
+
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+
+  letter-spacing: 0.4px;
+
+  z-index: 20;
+  pointer-events: none;
+
+  border: 1px solid #1e222d;
+}

@@ -1,0 +1,32 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #060a12;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(0, 192, 118, 0.1);
+  border-top-color: #00c076;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.logo {
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.pro { color: #00c076; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

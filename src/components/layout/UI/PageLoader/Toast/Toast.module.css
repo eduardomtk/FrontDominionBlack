@@ -1,0 +1,93 @@
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-width: 200px;
+
+  color: #ffffff;
+  animation: fadeSlide 0.25s ease-out;
+  overflow: hidden;
+  z-index: 10000;
+
+  will-change: transform, opacity;
+}
+
+/* ===== WIN ===== */
+.win {
+  background: linear-gradient(135deg, #00e38f, #00b873);
+  box-shadow:
+    0 0 0 1px rgba(0, 227, 143, 0.45),
+    0 0 24px rgba(0, 227, 143, 0.8),
+    0 12px 32px rgba(0, 227, 143, 0.6);
+}
+
+/* ===== LOSS ===== */
+.loss {
+  background: linear-gradient(135deg, #d84a4a, #9f2f2f);
+  box-shadow:
+    0 0 0 1px rgba(216, 74, 74, 0.25),
+    0 6px 16px rgba(216, 74, 74, 0.35);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.message {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.subMessage {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Barra regressiva */
+.progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.progressBar {
+  height: 100%;
+  background: #ffffff;
+  transition: width 0.1s linear;
+}
+
+@keyframes fadeSlide {
+  from {
+    transform: translateY(10px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ✅ saída suave pra esquerda (antes do duration acabar) */
+.exitLeft {
+  animation: toastExitLeft 0.3s ease-in forwards;
+}
+
+@keyframes toastExitLeft {
+  from {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0) translateX(-48px) scale(0.985);
+    opacity: 0;
+  }
+}

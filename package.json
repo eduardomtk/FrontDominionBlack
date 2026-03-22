@@ -1,0 +1,39 @@
+{
+  "name": "forex-tick-frontend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start-mt4": "node start-mt4.js",
+    "start-backend": "node backend/index.js",
+    "start-bridge": "node backend/bridge.mjs",
+    "dev-frontend": "npm run dev",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "npm run start-mt4 && concurrently \"npm run start-backend\" \"npm run start-bridge\" \"npm run dev-frontend\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.93.2",
+    "axios": "^1.13.2",
+    "concurrently": "^8.2.0",
+    "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
+    "dayjs": "^1.11.10",
+    "express": "^4.19.2",
+    "i18next": "^25.8.10",
+    "lightweight-charts": "^4.2.0",
+    "lzma-native": "^8.0.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-i18next": "^16.5.4",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.11.0",
+    "ws": "^8.16.0",
+    "zustand": "^5.0.9"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.2",
+    "supabase": "^2.72.9",
+    "vite": "^7.3.0"
+  }
+}

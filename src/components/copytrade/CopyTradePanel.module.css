@@ -1,0 +1,59 @@
+/* Overlay recortado: só cobre a área do gráfico + painel direito */
+.overlayArea {
+  position: fixed;
+  z-index: 9998;
+
+  top: var(--ctp-top, 0px);
+  left: var(--ctp-left, 0px);
+  right: var(--ctp-right, 0px);
+  bottom: var(--ctp-bottom, 0px);
+
+  /* escurece SOMENTE dentro da área útil (não afeta header/sidebar/footer) */
+  background: rgba(0, 0, 0, 0.55);
+
+  /* importante: não “vaza” efeito pra fora */
+  overflow: hidden;
+}
+
+/* Painel interno ocupa 100% da área recortada */
+.panel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  border-radius: 0;
+  background: rgba(10, 14, 20, 0.90);
+  border: 0;
+  overflow: hidden;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  color: #e8edf5;
+
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 2;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.body {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}

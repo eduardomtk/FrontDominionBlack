@@ -1,0 +1,681 @@
+.panel {
+  background: linear-gradient(
+    180deg,
+    rgba(7, 11, 20, 0.88) 0%,
+    rgba(5, 8, 18, 0.84) 100%
+  );
+  backdrop-filter: blur(14px);
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 250px;
+  gap: 15px;
+  color: white;
+  font-family: "Inter", sans-serif;
+}
+
+.topControls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.controlGroup {
+  min-width: 0;
+}
+
+.label {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 800;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.timeButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.timeBtn {
+  flex: 1;
+  background: rgba(7, 11, 20, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #94a3b8;
+  padding: 8px 0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeBtn.active {
+  background: rgba(0, 255, 156, 0.15);
+  border-color: #00ff9c;
+  color: #00ff9c;
+  box-shadow: 0 0 18px rgba(0, 255, 156, 0.35);
+}
+
+.inputWrapper {
+  background: rgba(5, 8, 18, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  display: flex;
+  height: 42px;
+  align-items: center;
+}
+
+.valueInput {
+  background: transparent;
+  border: none;
+  color: #fff;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  width: 100%;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.valueInput::-webkit-inner-spin-button,
+.valueInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+.mathBtn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  padding: 0 14px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.payoutSection {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.payoutNeon {
+  margin-bottom: 6px;
+}
+
+.glowBadge {
+  font-size: 9px;
+  font-weight: 900;
+  color: #00ff9c;
+}
+
+.percentageText {
+  font-size: 14px;
+  font-weight: 900;
+  color: #00ff9c;
+  text-shadow: 0 0 15px rgba(0, 255, 156, 0.6);
+}
+
+.profitDisplay {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.currencySymbol {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.profitAmount {
+  letter-spacing: 0.01em;
+}
+
+.actionButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.callButton,
+.putButton {
+  height: 48px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.callButton {
+  background: linear-gradient(135deg, #00ff9c, #00c076);
+  color: #042b1c;
+  box-shadow: 0 0 18px rgba(0, 255, 156, 0.5);
+}
+
+.putButton {
+  background: linear-gradient(135deg, #ff4d4d, #c92a2a);
+  color: #2b0a0a;
+  box-shadow: 0 0 18px rgba(255, 77, 77, 0.5);
+}
+
+.validationMsg {
+  margin-top: -4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 190, 190, 0.95);
+  line-height: 1.2;
+}
+
+.mobileTabs,
+.mobileOnlyContent {
+  display: none;
+}
+
+.desktopTradeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.tradeBtnIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.clockIcon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+}
+
+/* MOBILE PORTRAIT */
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .panel {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 8px 8px 6px;
+    gap: 8px;
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(
+      180deg,
+      rgba(8, 12, 21, 0.985) 0%,
+      rgba(5, 8, 18, 0.985) 100%
+    );
+    backdrop-filter: blur(12px);
+  }
+
+  .desktopTradeContent {
+    display: none;
+  }
+
+  .mobileTabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    height: 28px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0 -2px 2px;
+  }
+
+  .mobileTabBtn {
+    background: transparent;
+    border: none;
+    color: rgba(226, 232, 240, 0.62);
+    font-size: 10px;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 0 4px;
+    position: relative;
+  }
+
+  .mobileTabBtnActive {
+    color: #ffffff;
+  }
+
+  .mobileTabBtnActive::after {
+    content: "";
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    bottom: 0;
+    height: 2px;
+    border-radius: 999px;
+    background: #ffffff;
+  }
+
+  .mobileOnlyContent {
+    display: block;
+  }
+
+  .mobileOperationPane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .mobileControlsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    align-items: start;
+  }
+
+  .mobileControlBlock {
+    min-width: 0;
+  }
+
+  .mobileMiniLabel {
+    font-size: 8px;
+    color: #94a3b8;
+    font-weight: 800;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .timeBtn {
+    min-width: 0;
+    padding: 8px 0;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .inputWrapper {
+    height: 34px;
+    border-radius: 8px;
+  }
+
+  .mathBtn {
+    padding: 0 10px;
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .valueInput {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .mobileSummaryBar {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .mobileSummaryCellLeft,
+  .mobileSummaryCellCenter,
+  .mobileSummaryCellRight {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .mobileSummaryCellLeft {
+    justify-content: flex-start;
+  }
+
+  .mobileSummaryCellCenter {
+    justify-content: center;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .mobileSummaryCellRight {
+    justify-content: flex-end;
+  }
+
+  .mobileTimerChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .mobileTimerValue {
+    line-height: 1;
+    letter-spacing: 0.03em;
+  }
+
+  .mobileSummaryLabel {
+    font-size: 8px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: 0.05em;
+  }
+
+  .mobileSummaryPercent {
+    font-size: 12px;
+    font-weight: 900;
+    color: #00ff9c;
+    line-height: 1;
+  }
+
+  .mobileSummaryAmount {
+    font-size: 14px;
+    font-weight: 900;
+    color: #00ff9c;
+    white-space: nowrap;
+    line-height: 1;
+  }
+
+  .actionButtonsMobile {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .actionButtonsMobile .callButton,
+  .actionButtonsMobile .putButton {
+    height: 38px;
+    border-radius: 9px;
+    font-size: 12px;
+    font-weight: 900;
+    gap: 6px;
+    box-shadow: none;
+  }
+
+  .validationMsgMobile {
+    margin-top: 0;
+    font-size: 10px;
+    line-height: 1.25;
+    padding: 0 2px;
+    color: rgba(255, 190, 190, 0.95);
+    font-weight: 800;
+  }
+
+  .mobilePanelTabBody {
+    min-height: 86px;
+  }
+
+  .mobileEmptyState {
+    color: #64748b;
+    text-align: center;
+    padding: 18px 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .mobileHistoryPane {
+    max-height: 170px;
+    overflow-y: auto;
+    padding-right: 0;
+  }
+
+  .mobileHistoryList {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobileHistoryItem {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+    padding: 10px 8px 10px 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .mobileHistoryLeft {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    min-width: 62px;
+  }
+
+  .mobileHistoryTime {
+    font-size: 12px;
+    font-weight: 800;
+    color: rgba(226, 232, 240, 0.9);
+    font-family: "Roboto Mono", monospace;
+    line-height: 1.05;
+  }
+
+  .mobileHistoryDate {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.86);
+    font-family: "Roboto Mono", monospace;
+    white-space: nowrap;
+    line-height: 1.1;
+  }
+
+  .mobileHistoryMid {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    padding-left: 2px;
+  }
+
+  .mobileAssetIcon {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    display: grid;
+    place-items: center;
+  }
+
+  .mobileAssetIconRound {
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .mobileAssetIconForex {
+    border-radius: 4px;
+    overflow: hidden;
+    background: transparent;
+    border: none;
+  }
+
+  .mobileAssetIconImg {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    display: block;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .mobileAssetIconImgForex {
+    border-radius: 4px;
+  }
+
+  .mobileAssetIconImgRound {
+    border-radius: 999px;
+  }
+
+  .mobileHistoryTexts {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .mobileHistoryAsset {
+    color: rgba(226, 232, 240, 0.92);
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+    line-height: 1.08;
+  }
+
+  .mobileHistoryType {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.88);
+    line-height: 1.08;
+  }
+
+  .mobileHistoryRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+    padding-left: 10px;
+    padding-right: 8px;
+  }
+
+  .mobileHistoryAmount {
+    font-size: 12px;
+    font-weight: 900;
+    white-space: nowrap;
+    line-height: 1.05;
+  }
+
+  .mobileWin {
+    color: rgba(34, 197, 94, 0.92);
+  }
+
+  .mobileLoss {
+    color: rgba(239, 68, 68, 0.92);
+  }
+
+  .mobileHistoryMeta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: flex-end;
+  }
+
+  .mobileHistoryArrow {
+    font-size: 12px;
+    font-weight: 900;
+    color: rgba(148, 163, 184, 0.8);
+    line-height: 1;
+  }
+
+  .mobileHistoryStake {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(148, 163, 184, 0.82);
+    white-space: nowrap;
+    line-height: 1.05;
+  }
+}
+
+/* MOBILE LANDSCAPE */
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .panel {
+    width: 196px;
+    padding: 10px 10px 8px;
+    gap: 10px;
+  }
+
+  .desktopTradeContent {
+    gap: 10px;
+  }
+
+  .topControls {
+    gap: 10px;
+  }
+
+  .label {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  .timeButtons {
+    gap: 5px;
+  }
+
+  .timeBtn {
+    padding: 6px 0;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+
+  .inputWrapper {
+    height: 34px;
+  }
+
+  .valueInput {
+    font-size: 15px;
+  }
+
+  .mathBtn {
+    padding: 0 10px;
+    font-size: 16px;
+  }
+
+  .payoutSection {
+    padding: 10px 8px;
+    border-radius: 8px;
+  }
+
+  .glowBadge {
+    font-size: 8px;
+  }
+
+  .percentageText {
+    font-size: 12px;
+  }
+
+  .profitDisplay {
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .currencySymbol {
+    font-size: 13px;
+    margin-right: 3px;
+  }
+
+  .actionButtons {
+    gap: 8px;
+  }
+
+  .callButton,
+  .putButton {
+    height: 40px;
+    border-radius: 8px;
+    font-size: 13px;
+    gap: 7px;
+  }
+
+  .tradeBtnIcon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .validationMsg {
+    font-size: 10px;
+    margin-top: -2px;
+  }
+}

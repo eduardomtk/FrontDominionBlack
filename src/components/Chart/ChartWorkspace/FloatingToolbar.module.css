@@ -1,0 +1,52 @@
+.toolbarWrapper {
+  position: absolute;
+  left: 14px;
+  /* Ancorado embaixo para não obstruir o preço atual */
+  bottom: 75px; 
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  background: rgba(20, 25, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cfd3dc;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.iconBtn:hover {
+  background: rgba(35, 40, 52, 0.95);
+  color: #ffffff;
+}
+
+/* Estado Ativo: Verde Neon da OnBroker */
+.active {
+  background: rgba(0, 255, 157, 0.1) !important;
+  color: #00ff9d !important;
+  border-color: #00ff9d !important;
+  box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+}
+
+.iconBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.timeText {
+  font-size: 11px; /* Ajuste sutil para harmonia */
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.iconBtn:focus {
+  outline: none;
+}

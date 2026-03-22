@@ -1,0 +1,256 @@
+.scroll-to-realtime-wrap {
+  position: absolute;
+  right: 112px;
+  bottom: 22px;
+  z-index: 44;
+  pointer-events: auto;
+}
+
+/* =========================
+   BOTÃO BASE
+   ========================= */
+
+.scroll-to-realtime-button {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid rgba(109, 120, 139, 0.22);
+  border-radius: 7px;
+  cursor: pointer;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: linear-gradient(
+    180deg,
+    rgba(78, 84, 96, 0.96) 0%,
+    rgba(50, 56, 67, 0.97) 52%,
+    rgba(39, 44, 54, 0.98) 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    0 1px 0 rgba(0, 0, 0, 0.42),
+    0 3px 8px rgba(0, 0, 0, 0.20);
+
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    transform 90ms ease,
+    background 90ms ease;
+}
+
+/* hover: mantém o botão escuro, muda só acabamento */
+.scroll-to-realtime-button:hover {
+  border-color: rgba(126, 138, 159, 0.34);
+  background: linear-gradient(
+    180deg,
+    rgba(80, 86, 99, 0.97) 0%,
+    rgba(50, 56, 67, 0.98) 52%,
+    rgba(39, 44, 54, 0.99) 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.065),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+    0 1px 0 rgba(0, 0, 0, 0.44),
+    0 4px 10px rgba(0, 0, 0, 0.22);
+}
+
+/* clique pressionado: aí sim o botão inteiro fica azul */
+.scroll-to-realtime-button:active {
+  transform: translateY(1px);
+
+  border-color: rgba(75, 146, 255, 0.68);
+  background: linear-gradient(
+    180deg,
+    rgba(77, 150, 255, 0.98) 0%,
+    rgba(42, 111, 228, 0.99) 54%,
+    rgba(28, 84, 196, 1) 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 34, 104, 0.34),
+    0 0 0 1px rgba(59, 139, 255, 0.18),
+    0 0 14px rgba(42, 122, 255, 0.32);
+}
+
+.scroll-to-realtime-button:focus-visible {
+  outline: none;
+  border-color: rgba(82, 156, 255, 0.58);
+  box-shadow:
+    0 0 0 2px rgba(60, 144, 255, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    0 3px 8px rgba(0, 0, 0, 0.20);
+}
+
+/* =========================
+   ÍCONE / SETAS
+   ========================= */
+
+.scroll-to-realtime-button__icon {
+  width: 17px;
+  height: 17px;
+  display: block;
+  color: rgba(214, 221, 233, 0.92);
+  transition:
+    color 120ms ease,
+    filter 120ms ease,
+    transform 120ms ease;
+}
+
+/* importante para conseguir transformar os paths separadamente */
+.scroll-to-realtime-button__icon path {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 120ms ease,
+    stroke-width 120ms ease;
+}
+
+/* seta da esquerda MENOR */
+.scroll-to-realtime-button__icon path:first-child {
+  stroke-width: 1.9;
+  transform: translateX(-0.45px) scale(0.82);
+}
+
+/* seta da direita MAIOR */
+.scroll-to-realtime-button__icon path:last-child {
+  stroke-width: 2.55;
+  transform: translateX(0.45px) scale(1.12);
+}
+
+/* hover: somente as setas ficam azuis */
+.scroll-to-realtime-button:hover .scroll-to-realtime-button__icon {
+  color: rgba(67, 134, 255, 0.98);
+  filter: drop-shadow(0 0 5px rgba(71, 143, 255, 0.26));
+}
+
+/* clique: no active o ícone vai para azul bem forte/quase branco */
+.scroll-to-realtime-button:active .scroll-to-realtime-button__icon {
+  color: rgba(228, 241, 255, 0.99);
+  filter: drop-shadow(0 0 6px rgba(185, 220, 255, 0.34));
+}
+
+.scroll-to-realtime-button:active .scroll-to-realtime-button__icon path:first-child {
+  transform: translateX(-0.45px) scale(0.86);
+}
+
+.scroll-to-realtime-button:active .scroll-to-realtime-button__icon path:last-child {
+  transform: translateX(0.55px) scale(1.16);
+}
+
+/* =========================
+   TOOLTIP LATERAL
+   ========================= */
+
+.scroll-to-realtime-tooltip {
+  position: absolute;
+  right: -66px;
+  bottom: calc(100% + 8px);
+  top: auto;
+  transform: translateY(4px);
+
+  min-height: 30px;
+  padding: 0 10px 0 13px;
+  border: 1px solid rgba(98, 108, 126, 0.34);
+  border-radius: 4px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+
+  opacity: 0;
+  visibility: hidden;
+
+  background: linear-gradient(
+    180deg,
+    rgba(83, 89, 100, 0.97) 0%,
+    rgba(66, 72, 83, 0.98) 48%,
+    rgba(56, 61, 72, 0.99) 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 1px 0 rgba(0, 0, 0, 0.34);
+
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    visibility 0s linear 180ms;
+}
+
+.scroll-to-realtime-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 72px;
+  width: 11px;
+  height: 11px;
+  transform: translateY(-5px) rotate(45deg);
+
+  background: rgba(56, 61, 72, 0.99);
+  border-right: 1px solid rgba(98, 108, 126, 0.30);
+  border-bottom: 1px solid rgba(98, 108, 126, 0.30);
+}
+
+.scroll-to-realtime-tooltip__text {
+  color: rgba(236, 240, 246, 0.97);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.scroll-to-realtime-tooltip__keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scroll-to-realtime-tooltip__key {
+  min-width: 18px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: 3px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(172, 121, 17, 0.46);
+  background: linear-gradient(
+    180deg,
+    rgba(165, 119, 22, 0.98) 0%,
+    rgba(132, 92, 15, 0.99) 55%,
+    rgba(108, 76, 10, 1) 100%
+  );
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 226, 154, 0.18),
+    0 1px 0 rgba(0, 0, 0, 0.26);
+
+  color: rgba(255, 214, 118, 0.99);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* mostrar tooltip no hover/focus com delay de 1.5s e entrada suave */
+.scroll-to-realtime-wrap:hover .scroll-to-realtime-tooltip,
+.scroll-to-realtime-wrap:focus-within .scroll-to-realtime-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition-delay: 1s, 1s, 1s;
+}

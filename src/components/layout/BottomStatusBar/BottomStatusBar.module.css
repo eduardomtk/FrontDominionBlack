@@ -1,0 +1,116 @@
+.bar {
+  height: 26px;
+  width: 100%;
+  padding: 0 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  background: rgba(5, 10, 18, 0.65);
+  border-top: 1px solid rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(6px);
+  box-sizing: border-box;
+}
+
+.leftText {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(226, 232, 240, 0.75);
+  letter-spacing: 0.2px;
+  user-select: none;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Wrapper para inserir separador + botões (fica no canto direito) */
+.actionsWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Separador sutil igual corretora */
+.divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(148, 163, 184, 0.18);
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.08);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: rgba(226, 232, 240, 0.85);
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(226, 232, 240, 0.35);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* =========================================================
+   MOBILE PORTRAIT
+   - centraliza hora
+   - oculta som/fullscreen
+   ========================================================= */
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .bar {
+    justify-content: center;
+    padding: 0 8px;
+  }
+
+  .leftText {
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.15px;
+  }
+
+  .actionsWrap {
+    display: none;
+  }
+}
+
+/* =========================================================
+   MOBILE LANDSCAPE
+   - reduz altura e ruído visual
+   ========================================================= */
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .bar {
+    height: 22px;
+    padding: 0 8px;
+  }
+
+  .leftText {
+    font-size: 9px;
+    letter-spacing: 0.1px;
+  }
+
+  .actionsWrap {
+    display: none;
+  }
+}

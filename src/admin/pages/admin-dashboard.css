@@ -1,0 +1,274 @@
+/* Dashboard Admin — CSS isolado (não mexe no admin.css existente) */
+
+.adm-dash {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adm-dash-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 2px 2px 2px;
+}
+
+.adm-dash-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.adm-dash-subtitle {
+  margin-top: 4px;
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.adm-dash-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-range {
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.adm-range-btn {
+  border: 0;
+  outline: none;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 13px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+}
+
+.adm-range-btn:hover {
+  opacity: 1;
+  background: rgba(255,255,255,0.05);
+}
+
+.adm-range-btn.active {
+  opacity: 1;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.adm-warning {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 190, 60, 0.10);
+  border: 1px solid rgba(255, 190, 60, 0.25);
+  font-size: 13px;
+  opacity: 0.95;
+}
+
+.adm-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1200px) {
+  .adm-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 700px) {
+  .adm-kpi-grid { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+}
+
+.adm-kpi-card {
+  border-radius: 16px;
+  padding: 14px 14px 12px 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.20);
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-kpi-card:hover {
+  border-color: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+}
+
+.adm-kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  font-size: 16px;
+}
+
+.adm-kpi-title {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.85;
+  letter-spacing: 0.2px;
+}
+
+.adm-kpi-value {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.adm-kpi-subtitle {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.adm-kpi-highlight {
+  background: rgba(60, 160, 255, 0.07);
+  border: 1px solid rgba(60, 160, 255, 0.18);
+}
+
+.adm-health {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.adm-health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.adm-health-label {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+
+.adm-health-value {
+  font-size: 12px;
+  opacity: 0.95;
+  font-weight: 800;
+}
+
+.adm-chart {
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.20);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.adm-chart-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.adm-chart-title {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+}
+
+.adm-chart-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.adm-chart-range-meta {
+  font-size: 12px;
+  opacity: 0.75;
+  font-weight: 800;
+}
+
+.adm-chart-canvas {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.12);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.adm-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.adm-chart-grid line {
+  stroke: rgba(255,255,255,0.10);
+  stroke-width: 1;
+}
+
+.adm-chart-area {
+  fill: rgba(60, 160, 255, 0.18);
+}
+
+.adm-chart-line {
+  fill: none;
+  stroke: rgba(120, 220, 255, 0.85);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.adm-chart-dots circle {
+  fill: rgba(255,255,255,0.92);
+  stroke: rgba(60, 160, 255, 0.85);
+  stroke-width: 3;
+}
+
+.adm-chart-xlabels {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  opacity: 0.85;
+}
+
+.adm-chart-xlabel {
+  font-size: 11px;
+  opacity: 0.7;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  .adm-chart-xlabels { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .adm-chart-xlabels { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

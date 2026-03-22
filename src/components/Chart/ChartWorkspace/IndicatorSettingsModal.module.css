@@ -1,0 +1,557 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+/* ✅ modal com altura controlada + footer sempre visível */
+.modal {
+  position: absolute;
+  width: 440px;
+  max-width: calc(100vw - 24px);
+  max-height: min(78vh, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+
+  background: rgba(18, 22, 30, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  overflow: hidden;
+}
+
+.header {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 12px;
+  cursor: grab;
+  user-select: none;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.x {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+}
+
+.x:hover {
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.tabs {
+  display: flex;
+  gap: 14px;
+  padding: 10px 12px 0 12px;
+}
+
+.tab {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  padding: 8px 2px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.active {
+  color: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(255, 255, 255, 0.35);
+}
+
+/* ✅ body ocupa o espaço e scrolla (resolve o painel “pequeno” e o corte do “Fechar”) */
+.body {
+  padding: 12px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.block {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.blockTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 10px;
+}
+
+.blockTitleSub {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.60);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rowFull {
+  display: flex;
+  align-items: center;
+}
+
+.rowLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.rowControl {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* =========================
+   ✅ NORMALIZA CONTROLES NATIVOS
+   (remove “cruz”/P&B do Windows + mantém tema dark)
+   ========================= */
+.input,
+.select,
+.swatchBtn,
+.inlineSwatchBtn,
+.defaults,
+.cancel,
+.ok,
+.widthBtn,
+.styleBtn,
+.pickerClose {
+  color-scheme: dark; /* força UI nativa a respeitar tema escuro */
+}
+
+/* foco consistente (sem outline branco feio) */
+.input:focus,
+.select:focus,
+.swatchBtn:focus,
+.inlineSwatchBtn:focus,
+.defaults:focus,
+.cancel:focus,
+.ok:focus,
+.widthBtn:focus,
+.styleBtn:focus,
+.pickerClose:focus,
+.x:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+/* =========================
+   ✅ INPUT TEXT/NUMBER
+   ========================= */
+.input {
+  width: 140px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+}
+
+/* remove setinhas do number no Chrome/Edge (opcional, mas ajuda no visual) */
+.input[type="number"]::-webkit-outer-spin-button,
+.input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* =========================
+   ✅ SELECT (remove estilo nativo “cruzado” e seta default)
+   ========================= */
+.select {
+  width: 200px;
+  height: 32px;
+  padding: 0 34px 0 10px; /* espaço pra seta custom */
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  outline: none;
+
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  /* seta custom (em SVG) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='rgba(255,255,255,0.70)' d='M7 10l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px 16px;
+}
+
+/* garante opções do dropdown com fundo dark (evita branco/preto do sistema) */
+.select option {
+  background: rgba(18, 22, 30, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* =========================
+   ✅ CHECKBOX / RANGE (evita aparência P&B)
+   ========================= */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.80);
+  font-size: 13px;
+}
+
+/* caso tenha <input type="checkbox"> dentro do label */
+.checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(59, 130, 246, 0.85);
+}
+
+/* range consistente */
+.sliderWrap input[type="range"] {
+  flex: 1;
+  accent-color: rgba(59, 130, 246, 0.85);
+}
+
+/* melhora o “thumb/track” no WebKit (Chrome/Edge) sem inventar layout */
+.sliderWrap input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.sliderWrap input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  margin-top: -5px; /* centraliza no track */
+}
+
+.sliderWrap input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.sliderWrap input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+/* ----- estilo OnBroker: swatch + code ----- */
+
+.compactRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compactLabel {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.compactRight {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.swatchBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.swatchBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.inlineSwatchBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.swatchCode {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  letter-spacing: 0.2px;
+}
+
+/* ----- popover (painel de cor) ----- */
+
+.popover {
+  position: absolute;
+  right: 14px;
+  top: 102px;
+  z-index: 10;
+
+  width: 360px;
+  max-width: calc(100vw - 32px);
+
+  background: rgba(18, 22, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  padding: 12px;
+}
+
+/* ✅ garante que o picker NUNCA fique “anão”: limita por viewport e adiciona scroll interno */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 6px;
+}
+
+.colorCell {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  cursor: pointer;
+}
+
+.colorCell:hover {
+  outline: 2px solid rgba(255, 255, 255, 0.18);
+}
+
+.pickerDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+  margin: 2px 0;
+}
+
+.pickerRow,
+.pickerRowInline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pickerLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.70);
+  width: 90px;
+}
+
+.sliderWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sliderWrap input[type="range"] {
+  flex: 1;
+}
+
+.pct {
+  width: 52px;
+  text-align: right;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.80);
+}
+
+.widthButtons,
+.styleButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.widthBtn,
+.styleBtn {
+  height: 30px;
+  min-width: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.widthBtnActive,
+.styleBtnActive {
+  border-color: rgba(59, 130, 246, 0.65);
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.widthLine {
+  display: inline-block;
+  width: 22px;
+  background: rgba(255, 255, 255, 0.80);
+  border-radius: 999px;
+}
+
+.pickerFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pickerClose {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+/* ----- footer + dropdown padrões ----- */
+
+.footer {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.defaultsWrap {
+  position: relative;
+}
+
+.defaults {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.defaultsMenu {
+  position: absolute;
+  left: 0;
+  bottom: 42px;
+  width: 210px;
+
+  background: rgba(18, 22, 30, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+.defaultsItem {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+}
+
+.defaultsItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.footerRight {
+  display: flex;
+  gap: 10px;
+}
+
+.cancel {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+}
+
+.ok {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 0;
+  background: rgba(59, 130, 246, 0.85);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ok:hover {
+  background: rgba(59, 130, 246, 0.95);
+}
+
+.empty {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13px;
+}

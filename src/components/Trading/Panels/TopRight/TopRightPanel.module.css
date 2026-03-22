@@ -1,0 +1,115 @@
+.panelContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    color: #f0f0f0;
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.sideHeaderOnly {
+    margin-bottom: 25px;
+}
+
+.depositButtonFull {
+    width: 100%;
+    background-color: #37b778;
+    color: #1e2126;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.1s;
+}
+
+.depositButtonFull:active {
+    transform: scale(0.98);
+}
+
+.expirationSection { margin-bottom: 20px; }
+.sectionTitle { display: block; color: #aaaaaa; font-size: 0.8em; margin-bottom: 10px; text-align: center; text-transform: uppercase; }
+
+.timeframeSelector {
+    display: flex;
+    gap: 8px;
+    background-color: #1e2126;
+    padding: 5px;
+    border-radius: 6px;
+}
+
+.timeButton {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #aaaaaa;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.activeTime {
+    background-color: #34373d;
+    color: #37b778 !important;
+    border-radius: 4px;
+}
+
+.inputGroupCentralized {
+    background-color: #1e2126;
+    border: 1px solid #3c4048;
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.tradeInputCenter {
+    background: transparent;
+    border: none;
+    color: #f0f0f0;
+    font-size: 2.2em;
+    font-weight: bold;
+    text-align: center;
+    outline: none;
+    width: 100%;
+}
+
+.payoutHighlightCard {
+    background: linear-gradient(180deg, #2a2d34 0%, #1e2126 100%);
+    border: 1px solid #3c4048;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.payoutPercent { font-size: 1.4em; font-weight: bold; color: #37b778; margin-right: 10px; }
+.payoutProfit { font-size: 1.6em; font-weight: bold; color: #f0f0f0; }
+
+.tradeButton {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.2em;
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+
+.btnCall { background-color: #37b778; color: #1e2126; }
+.btnPut { background-color: #e74c3c; color: #fff; }
+
+.historySection { margin-top: 20px; border-top: 1px solid #3c4048; padding-top: 15px; }
+.historyHeader { font-size: 0.85em; color: #aaaaaa; margin-bottom: 10px; font-weight: bold; }
+.historyItem { background-color: #1e2126; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; margin-bottom: 8px; }
+.winValue { color: #37b778; font-weight: bold; }
+.lossValue { color: #e74c3c; font-weight: bold; }

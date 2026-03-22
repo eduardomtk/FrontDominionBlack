@@ -1,0 +1,63 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+
+.timeframes {
+  display: flex;
+  gap: 6px;
+}
+
+.timeframes button {
+  background: #1f2a40;
+  border: none;
+  color: #d1d4dc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.field input,
+.field select {
+  background: #0b1220;
+  border: 1px solid #1f2a40;
+  color: #fff;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.payout {
+  font-size: 14px;
+  color: #00c176;
+}
+
+.action {
+  height: 46px;
+  border-radius: 8px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.call {
+  background: #00c176;
+  color: #081c15;
+}
+
+.put {
+  background: #ff4d4f;
+  color: #2b0a0a;
+}

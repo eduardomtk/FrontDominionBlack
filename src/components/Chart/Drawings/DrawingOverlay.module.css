@@ -1,0 +1,15 @@
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+
+  /* nunca bloqueia o chart */
+  pointer-events: none;
+
+  /* acima do chart, abaixo do crosshair DOM */
+  z-index: 40;
+
+  image-rendering: auto;
+  touch-action: none;
+}

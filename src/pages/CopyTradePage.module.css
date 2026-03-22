@@ -1,0 +1,339 @@
+.wrap {
+  width: 100%;
+  height: 100%;
+  padding: 22px 26px;
+  color: #e8edf5;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin: 4px 0 6px;
+}
+
+.sub {
+  opacity: 0.75;
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+.hintLine {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 12px;
+}
+
+.lock {
+  opacity: 0.9;
+}
+
+.tabsRow {
+  display: flex;
+  gap: 26px;
+  align-items: flex-end;
+  margin-top: 8px;
+}
+
+.tab {
+  background: transparent;
+  border: 0;
+  color: #cfd7e6;
+  font-size: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.tabActive {
+  color: #16d189;
+  opacity: 1;
+  position: relative;
+}
+
+.tabActive::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -9px;
+  width: 100%;
+  height: 2px;
+  background: #16d189;
+  border-radius: 2px;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 14px;
+}
+
+.topControls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.search {
+  flex: 1;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(38, 44, 58, 0.78);
+  color: #e8edf5;
+  padding: 0 14px 0 38px;
+  outline: none;
+}
+
+.searchWrap {
+  position: relative;
+  flex: 1;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.followBtn {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 0;
+  background: #16d189;
+  color: #0b1511;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border-radius: 12px;
+  background: rgba(34, 40, 52, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 14px;
+}
+
+.cardHighlight {
+  outline: 1px solid rgba(22, 209, 137, 0.6);
+}
+
+.cardTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: #e8edf5;
+}
+
+.cardName {
+  font-weight: 800;
+  font-size: 13px;
+  margin: 0;
+}
+
+.followersRow {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.75;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.peopleIcon {
+  opacity: 0.85;
+}
+
+.metrics {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.metricLabel {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.metricValue {
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.valueGreen {
+  color: #16d189;
+}
+
+.valueWhite {
+  color: #e8edf5;
+}
+
+.bottomMetrics {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.actions {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btnGhost {
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.10);
+  color: #cfd7e6;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btnPrimary {
+  height: 36px;
+  border-radius: 8px;
+  border: 0;
+  background: #16d189;
+  color: #0b1511;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.empty {
+  height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
+  opacity: 0.7;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  opacity: 0.7;
+}
+
+.emptyText {
+  font-size: 14px;
+}
+
+.wantWrap {
+  margin-top: 18px;
+  border-radius: 12px;
+  background: rgba(34, 40, 52, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  padding: 18px;
+  max-width: 860px;
+}
+
+.wantTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 900;
+  margin: 0 0 6px;
+}
+
+.wantSub {
+  opacity: 0.75;
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+
+.wantText {
+  opacity: 0.8;
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+.mailBox {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(20, 24, 34, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.mailLine {
+  font-size: 13px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.mailStrong {
+  font-weight: 900;
+  color: #e8edf5;
+}
+
+.mailAddr {
+  color: #4aa8ff;
+  font-weight: 800;
+}
+
+.list {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.check {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(22, 209, 137, 0.18);
+  border: 1px solid rgba(22, 209, 137, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #16d189;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.footerHint {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.7;
+}
