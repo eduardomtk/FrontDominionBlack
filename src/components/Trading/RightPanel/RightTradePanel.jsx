@@ -24,7 +24,7 @@ const EXPIRATION_SECONDS = {
 const DEFAULT_AMOUNT = 20;
 const MIN_AMOUNT = 5;
 const MAX_AMOUNT = 5000;
-const MIN_LEAD_SECONDS = 30;
+const MIN_LEAD_SECONDS = 31;
 
 function normalizePair(pair) {
   return String(pair || "").replace("/", "").toUpperCase().trim();
@@ -68,7 +68,9 @@ function calcAlignedExpiryMs(nowMs, tfMs, minLeadMs) {
   let closeMs = bucketStartMs + tf;
   const remainingMs = closeMs - t;
 
-  if (remainingMs <= lead) {
+  // ✅ regra da corretora: enquanto o mostrador ainda está em 31, entra nesta vela.
+  // No primeiro instante em que cai para 30.xxx, já deve virar para a próxima.
+  if (remainingMs < lead) {
     closeMs += tf;
   }
 

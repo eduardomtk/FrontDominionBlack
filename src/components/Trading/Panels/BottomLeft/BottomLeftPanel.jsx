@@ -12,7 +12,7 @@ const EXPIRATION_SECONDS = {
 };
 
 // ✅ Regra: se faltar <= 30s pro fechamento, expira no PRÓXIMO fechamento
-const MIN_LEAD_SECONDS = 30;
+const MIN_LEAD_SECONDS = 31;
 
 function normalizePair(pair) {
   return String(pair || "").replace("/", "").toUpperCase().trim();
@@ -42,7 +42,9 @@ function calcAlignedExpiryMs(nowSec, tfSec, minLeadSec = MIN_LEAD_SECONDS) {
   let closeSec = bucketStart + tf;
 
   const remaining = closeSec - t;
-  if (remaining <= minLeadSec) closeSec += tf;
+  // ✅ enquanto o relógio ainda mostra 31, mantém nesta vela.
+  // Ao cair para 30.xxx, a ordem já precisa ir para a próxima.
+  if (remaining < minLeadSec) closeSec += tf;
 
   return closeSec * 1000;
 }
