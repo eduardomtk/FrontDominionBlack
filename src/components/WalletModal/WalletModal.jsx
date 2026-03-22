@@ -1897,7 +1897,7 @@ try { window.focus(); window.print(); } catch (e) {}
     const rows = historyFiltered.map((h) => ({
       Data: h.date || "",
       Metodo: h.method || "",
-      Valor: h.amount != null ? `R$ ${formatBRL(h.amount)}` : "",
+      Valor: h.amount != null ? moneyText(h.amount, h?.currency || accountCurrency) : "",
       Status: h.status || "",
     }));
     const header = [t("wallet:table.date"), t("wallet:table.method"), t("wallet:table.amount"), t("wallet:table.status")];
@@ -2441,7 +2441,7 @@ try { window.focus(); window.print(); } catch (e) {}
                             {rolloverRequired > 0 ? (
                               <>
                                 <div className={styles.withdrawCardValue}>
-                                  R$ {formatBRL(rolloverCompleted)} <span style={{ opacity: 0.8 }}>{t("wallet:common.of")}</span> R$ {formatBRL(rolloverRequired)}
+                                  {moneyText(rolloverCompleted)} <span style={{ opacity: 0.8 }}>{t("wallet:common.of")}</span> {moneyText(rolloverRequired)}
                                 </div>
 
                                 <div

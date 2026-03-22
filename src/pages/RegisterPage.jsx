@@ -202,7 +202,7 @@ function CustomSelect({
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { signUp, signIn, signInWithGoogle, upsertProfile } = useTradingAuth();
+  const { signUp, signIn, signInWithGoogle, refreshProfile } = useTradingAuth();
   const { t } = useTranslation(["common", "register"]);
   const { setLocale } = useLocale();
   const { layoutMode } = useTradingViewport();
@@ -281,18 +281,24 @@ export default function RegisterPage() {
     const countryName = countries.find((c) => c.code === country)?.name || "Brasil";
     const locale = localeFromCountry(country);
 
+    const bootstrapProfile = {
+      country: countryName,
+      country_code: country,
+      currency,
+      locale,
+    };
+
     setLoading(true);
-    const { error } = await signUp(email, password, { autoSignIn: false });
+    const { error } = await signUp(email, password, {
+      autoSignIn: false,
+      profile: bootstrapProfile,
+    });
     setLoading(false);
 
     if (error) {
       alert(supabaseErrorToUserMessage(error, getLocale()) || t("common:error_generic"));
       return;
     }
-
-    try {
-      localStorage.setItem("tp_prefs", JSON.stringify({ country, currency }));
-    } catch {}
 
     try {
       await setLocale(locale, { persistProfile: false });
@@ -318,11 +324,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await upsertProfile?.({
-        country: countryName,
-        currency,
-        locale,
-      });
+      await refreshProfile?.();
     } catch {}
 
     navigate("/trade", { replace: true });

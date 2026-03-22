@@ -234,10 +234,10 @@ function formatAssetLabel(raw) {
   return s;
 }
 
-function formatBRL(v) {
+function formatAmountValue(v, currency = "BRL", locale) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "---";
-  return n.toFixed(2);
+  return formatCurrencyValue(n, currency, locale);
 }
 
 function getPairKey(raw) {
@@ -684,7 +684,7 @@ const RightTradePanel = ({ onHoverAction }) => {
               </div>
 
               <div className={styles.mobileSummaryCellRight}>
-                <span className={styles.mobileSummaryAmount}>R$ {profit.toFixed(2)}</span>
+                <span className={styles.mobileSummaryAmount}>{currencySymbol} {formatAmountValue(profit, accountCurrency, accountLocale)}</span>
               </div>
             </div>
 
@@ -768,8 +768,10 @@ const RightTradePanel = ({ onHoverAction }) => {
                   const iconSrc = getPairIconSrc(rawAsset);
                   const isCall = tradeItem.direction === "CALL";
 
-                  const amountText = `${isWin ? "+" : "-"} R$ ${formatBRL(
-                    Math.abs(isWin ? profitValue : tradeItem.amount)
+                  const amountText = `${isWin ? "+" : "-"} ${getCurrencySymbol(accountCurrency)} ${formatAmountValue(
+                    Math.abs(isWin ? profitValue : tradeItem.amount),
+                    accountCurrency,
+                    accountLocale
                   )}`;
 
                   return (
@@ -812,7 +814,7 @@ const RightTradePanel = ({ onHoverAction }) => {
                         </div>
                         <div className={styles.mobileHistoryMeta}>
                           <span className={styles.mobileHistoryArrow}>{isCall ? "▴" : "▾"}</span>
-                          <span className={styles.mobileHistoryStake}>R$ {formatBRL(tradeItem.amount)}</span>
+                          <span className={styles.mobileHistoryStake}>{getCurrencySymbol(accountCurrency)} {formatAmountValue(tradeItem.amount, accountCurrency, accountLocale)}</span>
                         </div>
                       </div>
                     </div>
