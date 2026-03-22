@@ -798,10 +798,7 @@ export function TradeProvider({ children }) {
       expireTimersRef.current.delete(id);
     }
 
-    // ✅ fallback com pequena folga para nunca fechar cedo por relógio local.
-    // O fechamento soberano continua vindo da TradeEngine no boundary do candle.
-    const SAFETY_GRACE_MS = 1200;
-    const delay = Math.max(0, expMs - Date.now() + SAFETY_GRACE_MS);
+    const delay = Math.max(0, expMs - Date.now());
     const timeoutId = setTimeout(() => finalizeTradeById(id), delay);
 
     expireTimersRef.current.set(id, timeoutId);

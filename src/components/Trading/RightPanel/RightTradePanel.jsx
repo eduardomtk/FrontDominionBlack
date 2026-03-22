@@ -24,7 +24,7 @@ const EXPIRATION_SECONDS = {
 const DEFAULT_AMOUNT = 20;
 const MIN_AMOUNT = 5;
 const MAX_AMOUNT = 5000;
-const MIN_LEAD_SECONDS = 31;
+const MIN_LEAD_SECONDS = 30;
 
 function normalizePair(pair) {
   return String(pair || "").replace("/", "").toUpperCase().trim();
@@ -67,10 +67,13 @@ function calcAlignedExpiryMs(nowMs, tfMs, minLeadMs) {
   const bucketStartMs = Math.floor(t / tf) * tf;
   let closeMs = bucketStartMs + tf;
   const remainingMs = closeMs - t;
+  const remainingWholeSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const leadWholeSeconds = Math.max(0, Math.floor(lead / 1000));
 
-  // ✅ regra da corretora: enquanto o mostrador ainda está em 31, entra nesta vela.
-  // No primeiro instante em que cai para 30.xxx, já deve virar para a próxima.
-  if (remainingMs < lead) {
+  // ✅ Regra da corretora:
+  // - enquanto o cronômetro ainda mostra 31, continua na vela atual
+  // - no primeiro instante em que passa a mostrar 30.xxx, já vai para a próxima vela
+  if (remainingWholeSeconds <= leadWholeSeconds) {
     closeMs += tf;
   }
 
@@ -322,41 +325,29 @@ const RightTradePanel = ({ onHoverAction }) => {
 
   const profit = amtFinite * payout;
 
-  const clockRef = useRef({
-    lastServerMs: null,
-    lastLocalMs: null,
-  });
+  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
 
-  useMemo(() => {
+  function getNowMsSoberano() {
+    try {
+      const now = Number(getServerNowMs?.());
+      if (Number.isFinite(now) && now > 0) return now;
+    } catch {}
+
     const lt = pairData?.lastTick;
     const ms1 = toMsMaybe(lt?.serverTime);
     const ms2 = toMsMaybe(lt?.time ?? lt?.t);
-    const serverMs = Number.isFinite(ms1) ? ms1 : Number.isFinite(ms2) ? ms2 : null;
+    const fallback = Number.isFinite(ms1) ? ms1 : Number.isFinite(ms2) ? ms2 : null;
+    if (Number.isFinite(fallback)) return fallback;
 
-    if (Number.isFinite(serverMs)) {
-      clockRef.current.lastServerMs = serverMs;
-      clockRef.current.lastLocalMs = Date.now();
-    }
-  }, [pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
-
-  function getNowMsSoberano() {
-    const localNow = Date.now();
-    const { lastServerMs, lastLocalMs } = clockRef.current;
-
-    if (Number.isFinite(lastServerMs) && Number.isFinite(lastLocalMs)) {
-      const projected = Number(lastServerMs) + (localNow - Number(lastLocalMs));
-      return Math.max(projected, lastServerMs);
-    }
-
-    return localNow;
+    return Date.now();
   }
 
   useEffect(() => {
     const tick = () => setCountdownNow(getNowMsSoberano());
     tick();
-    const id = window.setInterval(tick, 1000);
+    const id = window.setInterval(tick, 200);
     return () => window.clearInterval(id);
-  }, [time, pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
+  }, [time, getServerNowMs, pairData?.lastTick?.serverTime, pairData?.lastTick?.time, pairData?.lastTick?.t]);
 
   const countdownLabel = useMemo(() => {
     const tfSec = EXPIRATION_SECONDS[time] || 60;

@@ -27,9 +27,8 @@ export default class TradeEngine {
     this.timeframe = timeframe;
     this.candleEngine = candleEngine;
 
-    // 🔒 fallback de payout por símbolo.
-    // O payout soberano do trade vem do payload de abertura.
-    this.defaultPayout = getPayoutBySymbol(symbol);
+    // 🔒 payout resolvido UMA vez
+    this.payout = getPayoutBySymbol(symbol);
 
     this.activeTrades = new Map();
     this.subscribers = new Set();
@@ -90,16 +89,10 @@ export default class TradeEngine {
     const openPrice = this._getOpenPrice(trade);
     if (typeof openPrice !== "number") return false;
 
-    const tradePayout = Number(trade?.payout);
-    const finalPayout =
-      Number.isFinite(tradePayout) && tradePayout > 0 && tradePayout < 1
-        ? tradePayout
-        : this.defaultPayout;
-
     this.activeTrades.set(trade.id, {
       ...trade,
       openPrice,
-      payout: finalPayout,
+      payout: this.payout,
       status: "OPEN",
       expirationTime: expMs, // ✅ ms internamente
     });
