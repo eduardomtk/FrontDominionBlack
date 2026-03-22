@@ -50,35 +50,6 @@ async function checkAffiliateAccess(userId) {
   return { ok: false, source: null };
 }
 
-function AffiliateBrand() {
-  return (
-    <div style={{ display: "grid", gap: 8, justifyItems: "center", marginTop: 6 }}>
-      <div style={{ display: "inline-flex", fontSize: 30, lineHeight: 1 }}>
-        <BrandLogo />
-      </div>
-      <div
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "7px 14px",
-          borderRadius: 999,
-          border: "1px solid rgba(0, 224, 255, 0.18)",
-          background: "linear-gradient(180deg, rgba(7,16,30,0.86), rgba(7,16,30,0.58))",
-          boxShadow: "0 10px 26px rgba(0,0,0,0.24)",
-          color: "#9bd4ff",
-          fontSize: 13,
-          fontWeight: 800,
-          letterSpacing: "0.16em",
-          textTransform: "uppercase",
-        }}
-      >
-        Portal de Afiliados
-      </div>
-    </div>
-  );
-}
-
 function EyeIcon({ open = false }) {
   if (open) {
     return (
@@ -131,6 +102,10 @@ function GoogleLogo() {
       />
     </svg>
   );
+}
+
+function DominionBrand() {
+  return <BrandLogo className={styles.authBrandLogo} />;
 }
 
 export default function AffiliateLoginPage() {
@@ -234,21 +209,7 @@ export default function AffiliateLoginPage() {
           )}
         >
           <div className={styles.header}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                marginTop: isMobilePortrait ? "-4px" : "-10px",
-                marginBottom: isMobilePortrait ? "8px" : "10px",
-                transform: isMobilePortrait ? "scale(1.08)" : "scale(1.18)",
-                transformOrigin: "top center",
-              }}
-            >
-              <BrandLogo />
-            </div>
-
-            <AffiliateBrand />
-
+            <DominionBrand />
             <p className={styles.affiliateSubtitle}>
               Acesse sua conta para acompanhar suas comissões
             </p>
