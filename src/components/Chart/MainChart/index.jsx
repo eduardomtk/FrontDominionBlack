@@ -300,6 +300,21 @@ function readBootSnapshot(key) {
   }
 }
 
+function getRightPriceScaleWidth(chart, fallback = 110) {
+  try {
+    const live = Number(chart?.priceScale?.("right")?.width?.());
+    if (Number.isFinite(live) && live > 0) return live;
+  } catch {}
+
+  try {
+    const minW = Number(chart?.priceScale?.("right")?.options?.()?.minimumWidth);
+    if (Number.isFinite(minW) && minW > 0) return minW;
+  } catch {}
+
+  const fb = Number(fallback);
+  return Number.isFinite(fb) && fb > 0 ? fb : 110;
+}
+
 export default function MainChart({
   onChartReady,
   showTimeScale = true,
@@ -379,6 +394,7 @@ export default function MainChart({
     unsubUserMove: null,
   });
 
+  const manualPriceScaleRef = useRef(false);
   const lastEngineObjRef = useRef(null);
 
   // ✅ soberano: epoch de reset de histórico (somente para "hard reset", NÃO em cada candle close)
@@ -662,22 +678,25 @@ export default function MainChart({
     return buf;
   }
 
-  function forceChartScaleRecovery() {
+  function forceChartScaleRecovery({ resetPriceScale = false } = {}) {
     const chart = chartRef.current;
     const container = containerRef.current;
     if (!chart || !container) return;
+
+    if (resetPriceScale) manualPriceScaleRef.current = false;
 
     const run = () => {
       try {
         const rect = container.getBoundingClientRect();
         const width = Math.max(1, Math.floor(rect.width));
         const height = Math.max(1, Math.floor(rect.height));
+        const allowAutoScale = !manualPriceScaleRef.current;
 
         chart.applyOptions({
           width,
           height,
           rightPriceScale: {
-            autoScale: true,
+            autoScale: allowAutoScale,
             visible: true,
             borderVisible: false,
             minimumWidth: priceScaleMinWidth,
@@ -688,9 +707,23 @@ export default function MainChart({
             secondsVisible: Boolean(showTimeScale),
             lockVisibleTimeRangeOnResize: true,
             shiftVisibleRangeOnNewBar: false,
-        fixLeftEdge: false,
-        rightBarStaysOnScroll: true,
-        minBarSpacing: 2.45,
+            fixLeftEdge: false,
+            rightBarStaysOnScroll: true,
+            minBarSpacing: 2.45,
+          },
+          handleScroll: {
+            mouseWheel: false,
+            pressedMouseMove: true,
+            horzTouchDrag: true,
+            vertTouchDrag: false,
+          },
+          handleScale: {
+            mouseWheel: false,
+            pinch: true,
+            axisPressedMouseMove: {
+              time: true,
+              price: true,
+            },
           },
         });
 
@@ -698,9 +731,9 @@ export default function MainChart({
           const ts = chart.timeScale?.();
           ts?.applyOptions?.({
             shiftVisibleRangeOnNewBar: false,
-        fixLeftEdge: false,
-        rightBarStaysOnScroll: true,
-        minBarSpacing: 2.45,
+            fixLeftEdge: false,
+            rightBarStaysOnScroll: true,
+            minBarSpacing: 2.45,
           });
         } catch {}
       } catch {}
@@ -1348,7 +1381,7 @@ export default function MainChart({
         pinch: true,
         axisPressedMouseMove: {
           time: true,
-          price: false,
+          price: true,
         },
       },
       crosshair: { mode: CrosshairMode.Hidden },
@@ -1506,7 +1539,7 @@ export default function MainChart({
         minBarSpacing: 2.45,
         },
         rightPriceScale: {
-          autoScale: true,
+          autoScale: !manualPriceScaleRef.current,
           visible: true,
           borderVisible: false,
           minimumWidth: priceScaleMinWidth,
@@ -1522,7 +1555,7 @@ export default function MainChart({
           pinch: true,
           axisPressedMouseMove: {
             time: true,
-            price: false,
+            price: true,
           },
         },
         crosshair: { mode: CrosshairMode.Hidden },
@@ -1531,6 +1564,63 @@ export default function MainChart({
 
     forceChartScaleRecovery();
   }, [showTimeScale, priceScaleMinWidth]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const container = containerRef.current;
+    if (!chart || !container) return;
+
+    const markManualPriceScale = (clientX) => {
+      const host = containerRef.current;
+      const chartApi = chartRef.current;
+      if (!host || !chartApi) return;
+
+      const rect = host.getBoundingClientRect();
+      const x = Number(clientX) - rect.left;
+      if (!Number.isFinite(x)) return;
+
+      const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
+      const startX = Math.max(0, rect.width - rightScaleWidth - 8);
+      if (x < startX) return;
+
+      manualPriceScaleRef.current = true;
+
+      try {
+        chartApi.applyOptions({
+          rightPriceScale: {
+            autoScale: false,
+            visible: true,
+            borderVisible: false,
+            minimumWidth: priceScaleMinWidth,
+          },
+          handleScale: {
+            mouseWheel: false,
+            pinch: true,
+            axisPressedMouseMove: { time: true, price: true },
+          },
+        });
+      } catch {}
+    };
+
+    const onMouseDown = (event) => markManualPriceScale(event.clientX);
+    const onTouchStart = (event) => {
+      const touch = event?.touches?.[0];
+      if (touch) markManualPriceScale(touch.clientX);
+    };
+
+    container.addEventListener("mousedown", onMouseDown, true);
+    container.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
+
+    return () => {
+      container.removeEventListener("mousedown", onMouseDown, true);
+      container.removeEventListener("touchstart", onTouchStart, true);
+    };
+  }, [priceScaleMinWidth]);
+
+  useEffect(() => {
+    manualPriceScaleRef.current = false;
+    forceChartScaleRecovery({ resetPriceScale: true });
+  }, [currentPairKey, type, priceScaleMinWidth, showTimeScale]);
 
   // ============================================================
   // ✅ CrosshairStore vindo do LWC
@@ -1612,7 +1702,7 @@ export default function MainChart({
     if (!timeScale) return;
 
     const MIN_LEFT_FROM = -8;
-    const MAX_VISIBLE_BARS = 260;
+    const MAX_VISIBLE_BARS = 320;
     const MIN_VISIBLE_BARS = 12;
     const RIGHT_OFFSET = 15;
 

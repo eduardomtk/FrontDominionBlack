@@ -4,58 +4,65 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import styles from "./AdminLogin.module.css";
 
 export default function AdminLogin() {
-  const { login } = useAdminAuth();
+  const { login, loading, isAuthenticated } = useAdminAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e) {
+  if (!loading && isAuthenticated) {
+    navigate("/adm", { replace: true });
+  }
+
+  async function handleSubmit(e) {
     e.preventDefault();
+
+    if (submitting) return;
+
+    setSubmitting(true);
     setError("");
 
-    // 🔒 NORMALIZAÇÃO
-    const user = username.trim();
-    const pass = password.trim();
+    const result = await login(email, password);
 
-    const success = login(user, pass);
-
-    if (success) {
-      // ✅ admin app real está em /adm
+    if (result.ok) {
       navigate("/adm", { replace: true });
     } else {
-      setError("Usuário ou senha inválidos");
+      setError(result.error || "Falha ao autenticar.");
     }
+
+    setSubmitting(false);
   }
 
   return (
     <div className={styles.container}>
       <form className={styles.card} onSubmit={handleSubmit}>
-        <h1 className={styles.title}>Painel Administrativo</h1>
-        <p className={styles.subtitle}>Acesso restrito</p>
+        <h1 className={styles.title}>Dominion Black Admin</h1>
+        <p className={styles.subtitle}>Acesso administrativo restrito</p>
 
         <input
           className={styles.input}
-          placeholder="Usuário"
-          autoComplete="off"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          type="email"
+          placeholder="E-mail administrativo"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
         <input
           className={styles.input}
           type="password"
           placeholder="Senha"
-          autoComplete="off"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
         {error && <span className={styles.error}>{error}</span>}
 
-        <button className={styles.button} type="submit">
-          Entrar
+        <button className={styles.button} type="submit" disabled={submitting}>
+          {submitting ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </div>

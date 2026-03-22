@@ -1,30 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/services/supabaseClient";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 function DominionBrand() {
   return (
-    <div style={styles.dominionLogo} aria-label="Dominion Black">
-      <span style={styles.dominionMain}>
-        <span style={styles.dominionDWrap}>
-          <span style={styles.dominionD}>D</span>
-
-          <span style={styles.dominionCrownContainer} aria-hidden="true">
-            <span style={styles.dominionParticles} />
-            <span style={styles.dominionCrown}>
-              <span style={{ ...styles.dominionDiamond, ...styles.dominionBlue }} />
-              <span style={{ ...styles.dominionDiamond, ...styles.dominionRed }} />
-              <span style={{ ...styles.dominionDiamond, ...styles.dominionGreen }} />
-            </span>
-          </span>
-        </span>
-
-        <span style={styles.dominionRest}>
-          om<span style={styles.iFix}>i</span>n<span style={styles.iFix}>i</span>on
-        </span>
-      </span>
-
-      <span style={styles.dominionAccent}>Black</span>
+    <div style={styles.authBrandLogoWrap}>
+      <BrandLogo />
     </div>
   );
 }

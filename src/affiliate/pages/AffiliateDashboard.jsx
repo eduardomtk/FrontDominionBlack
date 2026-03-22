@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/services/supabaseClient";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 function isActiveStatus(status) {
   const s = String(status || "").trim().toUpperCase();
@@ -93,25 +94,37 @@ function normalizeErrorMessage(err, fallback) {
 
 function AffiliateBrand({ isMobile = false }) {
   return (
-    <div style={{ ...styles.brandLogo, ...(isMobile ? styles.brandLogoMobile : null) }}>
-      <span style={styles.brandMain}>
-        <span style={styles.brandPWrap}>
-          <span style={styles.brandP}>P</span>
-          <span style={styles.brandCutTriangle} aria-hidden="true" />
-          <span style={styles.brandCutDot} aria-hidden="true" />
-          <span style={styles.crownContainer} aria-hidden="true">
-            <span style={styles.particles} />
-            <span style={styles.crown}>
-              <span style={{ ...styles.diamond, ...styles.diamondBlue }} />
-              <span style={{ ...styles.diamond, ...styles.diamondRed }} />
-              <span style={{ ...styles.diamond, ...styles.diamondGreen }} />
-            </span>
-          </span>
-        </span>
-        <span style={styles.brandRest}>ortal</span>
-      </span>
+    <div style={{ display: "grid", gap: isMobile ? 6 : 8, alignItems: "start" }}>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          fontSize: isMobile ? 22 : 28,
+          lineHeight: 1,
+        }}
+      >
+        <BrandLogo />
+      </div>
 
-      <span style={styles.brandAccent}>Afiliados</span>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          width: "fit-content",
+          padding: isMobile ? "6px 10px" : "7px 14px",
+          borderRadius: 999,
+          border: "1px solid rgba(0, 224, 255, 0.18)",
+          background: "linear-gradient(180deg, rgba(7,16,30,0.86), rgba(7,16,30,0.58))",
+          boxShadow: "0 10px 26px rgba(0,0,0,0.24)",
+          color: "#9bd4ff",
+          fontSize: isMobile ? 11 : 13,
+          fontWeight: 800,
+          letterSpacing: isMobile ? "0.12em" : "0.16em",
+          textTransform: "uppercase",
+        }}
+      >
+        Portal de Afiliados
+      </div>
     </div>
   );
 }

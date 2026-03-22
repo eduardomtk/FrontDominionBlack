@@ -50,34 +50,6 @@ async function checkAffiliateAccess(userId) {
   return { ok: false, source: null };
 }
 
-function AffiliateBrand() {
-  return (
-    <div className={styles.affiliateBrand} aria-label="Portal Afiliados">
-      <span className={styles.affiliateBrandMain}>
-        <span className={styles.affiliatePWrap}>
-          <span className={styles.affiliateP}>P</span>
-
-          <span className={styles.affiliateCutTriangle} aria-hidden="true" />
-          <span className={styles.affiliateCutDot} aria-hidden="true" />
-
-          <span className={styles.affiliateCrownContainer} aria-hidden="true">
-            <span className={styles.affiliateParticles} />
-            <span className={styles.affiliateCrown}>
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateBlue}`} />
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateRed}`} />
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateGreen}`} />
-            </span>
-          </span>
-        </span>
-
-        <span className={styles.affiliateRest}>ortal</span>
-      </span>
-
-      <span className={styles.affiliateBrandAccent}>Afiliados</span>
-    </div>
-  );
-}
-
 function EyeIcon({ open = false }) {
   if (open) {
     return (
@@ -130,6 +102,10 @@ function GoogleLogo() {
       />
     </svg>
   );
+}
+
+function DominionBrand() {
+  return <BrandLogo className={styles.authBrandLogo} />;
 }
 
 export default function AffiliateLoginPage() {
@@ -233,21 +209,7 @@ export default function AffiliateLoginPage() {
           )}
         >
           <div className={styles.header}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                marginTop: isMobilePortrait ? "-4px" : "-10px",
-                marginBottom: isMobilePortrait ? "8px" : "10px",
-                transform: isMobilePortrait ? "scale(1.08)" : "scale(1.18)",
-                transformOrigin: "top center",
-              }}
-            >
-              <BrandLogo />
-            </div>
-
-            <AffiliateBrand />
-
+            <DominionBrand />
             <p className={styles.affiliateSubtitle}>
               Acesse sua conta para acompanhar suas comissões
             </p>

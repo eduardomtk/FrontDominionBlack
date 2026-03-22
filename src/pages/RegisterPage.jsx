@@ -8,6 +8,7 @@ import { getLocale, setLocale as setStoredLocale, localeFromCountry } from "@/i1
 import { useLocale } from "@/context/LocaleContext";
 import { useTranslation } from "react-i18next";
 import useTradingViewport from "@/hooks/useTradingViewport";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -66,30 +67,7 @@ function GoogleLogo() {
  * ✅ Dominion Black (padrão premium)
  */
 function DominionBrand() {
-  return (
-    <div className={styles.dominionLogo} aria-label="Dominion Black">
-      <span className={styles.dominionMain}>
-        <span className={styles.dominionDWrap}>
-          <span className={styles.dominionD}>D</span>
-
-          <span className={styles.dominionCrownContainer} aria-hidden="true">
-            <span className={styles.dominionParticles} />
-            <span className={styles.dominionCrown}>
-              <span className={`${styles.dominionDiamond} ${styles.dominionBlue}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionRed}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionGreen}`} />
-            </span>
-          </span>
-        </span>
-
-        <span className={styles.dominionRest}>
-          om<span className={styles.iFix}>i</span>n<span className={styles.iFix}>i</span>on
-        </span>
-      </span>
-
-      <span className={styles.dominionAccent}>Black</span>
-    </div>
-  );
+  return <BrandLogo className={styles.authBrandLogo} />;
 }
 
 function ChevronDownIcon() {
@@ -224,7 +202,7 @@ function CustomSelect({
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const { signUp, signIn, signInWithGoogle, upsertProfile } = useTradingAuth();
+  const { signUp, signIn, signInWithGoogle, refreshProfile } = useTradingAuth();
   const { t } = useTranslation(["common", "register"]);
   const { setLocale } = useLocale();
   const { layoutMode } = useTradingViewport();
@@ -303,18 +281,24 @@ export default function RegisterPage() {
     const countryName = countries.find((c) => c.code === country)?.name || "Brasil";
     const locale = localeFromCountry(country);
 
+    const bootstrapProfile = {
+      country: countryName,
+      country_code: country,
+      currency,
+      locale,
+    };
+
     setLoading(true);
-    const { error } = await signUp(email, password, { autoSignIn: false });
+    const { error } = await signUp(email, password, {
+      autoSignIn: false,
+      profile: bootstrapProfile,
+    });
     setLoading(false);
 
     if (error) {
       alert(supabaseErrorToUserMessage(error, getLocale()) || t("common:error_generic"));
       return;
     }
-
-    try {
-      localStorage.setItem("tp_prefs", JSON.stringify({ country, currency }));
-    } catch {}
 
     try {
       await setLocale(locale, { persistProfile: false });
@@ -340,11 +324,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await upsertProfile?.({
-        country: countryName,
-        currency,
-        locale,
-      });
+      await refreshProfile?.();
     } catch {}
 
     navigate("/trade", { replace: true });
