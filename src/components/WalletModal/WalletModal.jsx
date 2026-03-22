@@ -102,6 +102,18 @@ const WITHDRAW_FEE_PCT = 0.03;
 const MIN_DEPOSIT_BRL = 60;
 const MIN_WITHDRAW_BRL = 100;
 
+const MIN_DEPOSIT_BY_CURRENCY = {
+  BRL: 60,
+  USD: 12,
+  EUR: 10,
+};
+
+const MIN_WITHDRAW_BY_CURRENCY = {
+  BRL: 100,
+  USD: 20,
+  EUR: 17,
+};
+
 // ✅ polling leve para refletir status quando admin muda (mesmo padrão do ProfileModal)
 const KYC_POLL_MS = 5000;
 
@@ -303,6 +315,8 @@ export default function WalletModal({
   const accountCurrency = normalizeCurrency(profile?.currency, "BRL");
   const accountLocale = profile?.locale || i18n?.resolvedLanguage || undefined;
   const accountCurrencySymbol = getCurrencySymbol(accountCurrency);
+  const minDepositAmount = MIN_DEPOSIT_BY_CURRENCY[accountCurrency] ?? MIN_DEPOSIT_BRL;
+  const minWithdrawAmount = MIN_WITHDRAW_BY_CURRENCY[accountCurrency] ?? MIN_WITHDRAW_BRL;
   const moneyText = useCallback((value, currency = accountCurrency) => formatCurrency(value, currency, currency === accountCurrency ? accountLocale : undefined), [accountCurrency, accountLocale]);
   const moneyValue = useCallback((value, currency = accountCurrency) => formatCurrencyValue(value, currency, currency === accountCurrency ? accountLocale : undefined), [accountCurrency, accountLocale]);
   const [tab, setTab] = useState(initialTab);
@@ -597,11 +611,11 @@ export default function WalletModal({
   }, [depositValue]);
 
   const quickValues = useMemo(() => {
-    if (accountCurrency === "USD") return [10, 20, 50, 100, 200, 500, 1000];
+    if (accountCurrency === "USD") return [12, 20, 50, 100, 200, 500, 1000];
     if (accountCurrency === "EUR") return [10, 20, 50, 100, 200, 500, 1000];
     return [60, 100, 200, 500, 1000, 5000, 10000, 15000];
   }, [accountCurrency]);
-  const canDeposit = accountCurrency === "BRL" ? depositNumber >= MIN_DEPOSIT_BRL : depositNumber > 0;
+  const canDeposit = depositNumber >= minDepositAmount;
 
   // ==========================
   // ✅ BÔNUS APLICADO (valor recebido = depósito + bônus)
@@ -1322,7 +1336,7 @@ const hasActiveBonusLock = useMemo(() => {
 
   const canWithdrawSubmit = Boolean(
     canUseWithdrawScreen &&
-      withdrawNumber >= MIN_WITHDRAW_BRL &&
+      withdrawNumber >= minWithdrawAmount &&
       totalDebit <= withdrawableCash + 1e-6 &&
       acceptTerms &&
       cpfPixKey &&
@@ -1713,7 +1727,7 @@ ${list.map(renderRow).join("") || `<tr><td colspan="4" class="muted">Sem registr
 <tfoot>
 <tr>
 <td colspan="2" class="tfootLabel">${esc(totals.label)}</td>
-<td class="num tfootVal">${esc(kindKey === "ops" ? formatBRL(totals.total) : money(totals.total))}</td>
+<td class="num tfootVal">${esc(money(totals.total))}</td>
 <td></td>
 </tr>
 </tfoot>
@@ -2164,7 +2178,7 @@ try { window.focus(); window.print(); } catch (e) {}
                           <img src={pixLogo} alt="" className={styles.methodPixLogo} draggable={false} aria-hidden />
                           <div className={styles.methodInfo}>
                             <div className={styles.methodSub}>
-                              <div>{accountCurrency === "BRL" ? `${t("wallet:deposit.minimum")}: ${moneyText(MIN_DEPOSIT_BRL, "BRL")}` : `Pix mínimo: ${moneyText(MIN_DEPOSIT_BRL, "BRL")}`}</div>
+                              <div>{accountCurrency === "BRL" ? `${t("wallet:deposit.minimum")}: ${moneyText(minDepositAmount)}` : `${t("wallet:deposit.minimum")}: ${moneyText(minDepositAmount)} • Pix: ${moneyText(MIN_DEPOSIT_BRL, "BRL")}`}</div>
                               <div>{t("wallet:deposit.processing_time")}</div>
                             </div>
                           </div>
@@ -2173,9 +2187,9 @@ try { window.focus(); window.print(); } catch (e) {}
                           <div className={styles.valuePrefix}>{accountCurrencySymbol}</div>
                           <input className={styles.valueInput} value={depositValue} onChange={(e) => setDepositValue(e.target.value)} inputMode="decimal" />
                         </div>
-                        {depositNumber > 0 && depositNumber < MIN_DEPOSIT_BRL ? (
+                        {depositNumber > 0 && depositNumber < minDepositAmount ? (
                           <div style={{ marginTop: 8, fontSize: 12, opacity: 0.95, color: "#ff6b6b", fontWeight: 800 }}>
-                            Depósito mínimo via Pix: {moneyText(MIN_DEPOSIT_BRL, "BRL")}.
+                            Depósito mínimo da conta: {moneyText(minDepositAmount)} • Pix equivalente: {moneyText(MIN_DEPOSIT_BRL, "BRL")}.
                           </div>
                         ) : null}
 
@@ -2548,8 +2562,8 @@ try { window.focus(); window.print(); } catch (e) {}
                               disabled={hasActiveBonusLock}
                             />
                           </div>
-                          {withdrawNumber > 0 && withdrawNumber < MIN_WITHDRAW_BRL ? (
-                            <div className={styles.withdrawWarn}>Saque mínimo: {moneyText(MIN_WITHDRAW_BRL)}.</div>
+                          {withdrawNumber > 0 && withdrawNumber < minWithdrawAmount ? (
+                            <div className={styles.withdrawWarn}>Saque mínimo: {moneyText(minWithdrawAmount)}.</div>
                           ) : null}
                           {withdrawNumber > 0 && totalDebit > available ? <div className={styles.withdrawWarn}>{t("wallet:withdraw.above_available")}</div> : null}
                         </div>

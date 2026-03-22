@@ -15,7 +15,7 @@ import { useMarketConfigs } from "@/context/MarketConfigContext";
 import { useMaintenance } from "@/context/MaintenanceContext";
 import { useTranslation } from "react-i18next";
 import { useTradingAuth } from "@/context/TradingAuthContext";
-import { formatCurrencyValue, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
+import { formatCurrency, formatCurrencyValue, getCurrencySymbol, normalizeCurrency } from "@/utils/currency";
 
 const EXPIRATION_SECONDS = {
   M1: 60,
@@ -234,10 +234,10 @@ function formatAssetLabel(raw) {
   return s;
 }
 
-function formatAmountValue(v, currency = "BRL", locale) {
+function formatBRL(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "---";
-  return formatCurrencyValue(n, currency, locale);
+  return n.toFixed(2);
 }
 
 function getPairKey(raw) {
@@ -684,7 +684,7 @@ const RightTradePanel = ({ onHoverAction }) => {
               </div>
 
               <div className={styles.mobileSummaryCellRight}>
-                <span className={styles.mobileSummaryAmount}>{currencySymbol} {formatAmountValue(profit, accountCurrency, accountLocale)}</span>
+                <span className={styles.mobileSummaryAmount}>R$ {profit.toFixed(2)}</span>
               </div>
             </div>
 
@@ -768,10 +768,10 @@ const RightTradePanel = ({ onHoverAction }) => {
                   const iconSrc = getPairIconSrc(rawAsset);
                   const isCall = tradeItem.direction === "CALL";
 
-                  const amountText = `${isWin ? "+" : "-"} ${getCurrencySymbol(accountCurrency)} ${formatAmountValue(
+                  const amountText = `${isWin ? "+" : "-"} ${formatCurrency(
                     Math.abs(isWin ? profitValue : tradeItem.amount),
                     accountCurrency,
-                    accountLocale
+                    accountLocale,
                   )}`;
 
                   return (
@@ -814,7 +814,7 @@ const RightTradePanel = ({ onHoverAction }) => {
                         </div>
                         <div className={styles.mobileHistoryMeta}>
                           <span className={styles.mobileHistoryArrow}>{isCall ? "▴" : "▾"}</span>
-                          <span className={styles.mobileHistoryStake}>{getCurrencySymbol(accountCurrency)} {formatAmountValue(tradeItem.amount, accountCurrency, accountLocale)}</span>
+                          <span className={styles.mobileHistoryStake}>{formatCurrency(tradeItem.amount, accountCurrency, accountLocale)}</span>
                         </div>
                       </div>
                     </div>
