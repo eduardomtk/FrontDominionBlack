@@ -52,28 +52,29 @@ async function checkAffiliateAccess(userId) {
 
 function AffiliateBrand() {
   return (
-    <div className={styles.affiliateBrand} aria-label="Portal Afiliados">
-      <span className={styles.affiliateBrandMain}>
-        <span className={styles.affiliatePWrap}>
-          <span className={styles.affiliateP}>P</span>
-
-          <span className={styles.affiliateCutTriangle} aria-hidden="true" />
-          <span className={styles.affiliateCutDot} aria-hidden="true" />
-
-          <span className={styles.affiliateCrownContainer} aria-hidden="true">
-            <span className={styles.affiliateParticles} />
-            <span className={styles.affiliateCrown}>
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateBlue}`} />
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateRed}`} />
-              <span className={`${styles.affiliateDiamond} ${styles.affiliateGreen}`} />
-            </span>
-          </span>
-        </span>
-
-        <span className={styles.affiliateRest}>ortal</span>
-      </span>
-
-      <span className={styles.affiliateBrandAccent}>Afiliados</span>
+    <div style={{ display: "grid", gap: 8, justifyItems: "center", marginTop: 6 }}>
+      <div style={{ display: "inline-flex", fontSize: 30, lineHeight: 1 }}>
+        <BrandLogo />
+      </div>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "7px 14px",
+          borderRadius: 999,
+          border: "1px solid rgba(0, 224, 255, 0.18)",
+          background: "linear-gradient(180deg, rgba(7,16,30,0.86), rgba(7,16,30,0.58))",
+          boxShadow: "0 10px 26px rgba(0,0,0,0.24)",
+          color: "#9bd4ff",
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: "0.16em",
+          textTransform: "uppercase",
+        }}
+      >
+        Portal de Afiliados
+      </div>
     </div>
   );
 }

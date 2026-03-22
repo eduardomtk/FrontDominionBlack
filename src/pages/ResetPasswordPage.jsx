@@ -15,6 +15,10 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+function DominionBrand() {
+  return <BrandLogo className={styles.authBrandLogo} />;
+}
+
 export default function ResetPasswordPage() {
   const { t } = useTranslation(["common", "resetPassword"]);
   const navigate = useNavigate();
@@ -90,7 +94,7 @@ export default function ResetPasswordPage() {
           )}
         >
           <div className={styles.header}>
-            <BrandLogo className={styles.dominionLogo} />
+            <DominionBrand />
             <p className={styles.affiliateSubtitle}>{t("resetPassword:subtitle")}</p>
           </div>
 

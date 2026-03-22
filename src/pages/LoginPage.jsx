@@ -63,6 +63,10 @@ function GoogleLogo() {
   );
 }
 
+function DominionBrand() {
+  return <BrandLogo className={styles.authBrandLogo} />;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { signIn, signInWithGoogle } = useTradingAuth();
@@ -133,7 +137,7 @@ export default function LoginPage() {
 
         <div className={cn(styles.authContent, isMobilePortrait && styles.authContentMobilePortrait)}>
           <div className={styles.header}>
-            <BrandLogo className={styles.dominionLogo} />
+            <DominionBrand />
             <p className={styles.affiliateSubtitle}>{t("login:subtitle")}</p>
           </div>
 

@@ -1,3 +1,17 @@
+.authBrandLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  line-height: 1;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .authBrandLogo {
+    font-size: 30px;
+  }
+}
+
 .header {
   margin-bottom: 14px;
   text-align: center;

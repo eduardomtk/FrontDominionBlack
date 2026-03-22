@@ -3,6 +3,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/services/supabaseClient";
 import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
+function DominionBrand() {
+  return (
+    <div style={styles.authBrandLogoWrap}>
+      <BrandLogo />
+    </div>
+  );
+}
+
 export default function VerifyEmailPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -114,8 +122,7 @@ export default function VerifyEmailPage() {
 
       <div style={currentCardStyle} role="status" aria-live="polite">
         <div style={styles.headerWrap}>
-          <style>{`.verify-email-brand{font-size:22px;display:inline-flex;align-items:center;}`}</style>
-          <BrandLogo className="verify-email-brand" />
+          <DominionBrand />
           <div style={styles.subtitle}>Confirmação de e-mail da sua conta</div>
         </div>
 

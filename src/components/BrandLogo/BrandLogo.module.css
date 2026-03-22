@@ -1,21 +1,19 @@
- .logo {
-  position: relative;
+.logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   user-select: none;
   font-size: inherit;
+  max-width: 100%;
 }
 
 .image {
   display: block;
-  height: 1em;
+  height: 1.38em;
   width: auto;
-  max-width: none;
+  max-width: 100%;
   object-fit: contain;
-  image-rendering: auto;
-  -webkit-user-drag: none;
-  user-select: none;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.05)) drop-shadow(0 10px 22px rgba(0, 0, 0, 0.35));
   pointer-events: none;
 }

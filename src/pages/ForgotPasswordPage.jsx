@@ -14,6 +14,10 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+function DominionBrand() {
+  return <BrandLogo className={styles.authBrandLogo} />;
+}
+
 export default function ForgotPasswordPage() {
   const { t } = useTranslation(["common", "forgotPassword"]);
   const { requestPasswordReset } = useTradingAuth();
@@ -61,7 +65,7 @@ export default function ForgotPasswordPage() {
           )}
         >
           <div className={styles.header}>
-            <BrandLogo className={styles.dominionLogo} />
+            <DominionBrand />
             <p className={styles.affiliateSubtitle}>{t("forgotPassword:subtitle")}</p>
           </div>
 
