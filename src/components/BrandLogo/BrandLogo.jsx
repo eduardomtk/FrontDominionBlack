@@ -1,30 +1,11 @@
 import React from "react";
 import styles from "./BrandLogo.module.css";
+import logoSrc from "@/assets/images/branding/dominionblack_transparent.png";
 
-export default function BrandLogo({ className = "" }) {
+export default function BrandLogo({ className = "", alt = "Dominion Black" }) {
   return (
-    <div className={`${styles.logo} ${className}`}>
-      <span className={styles.logoMain}>
-        <span className={styles.logoDWrap}>
-          <span className={styles.logoD}>D</span>
-
-          <span className={styles.crownContainer} aria-hidden="true">
-            <span className={styles.particles} />
-            <span className={styles.crown}>
-              <span className={`${styles.diamond} ${styles.blue}`} />
-              <span className={`${styles.diamond} ${styles.red}`} />
-              <span className={`${styles.diamond} ${styles.green}`} />
-            </span>
-          </span>
-        </span>
-
-        {/* ✅ mesmíssimo texto, só que com os "i" embrulhados pra aplicar o corte */}
-        <span className={styles.logoRest}>
-          om<span className={styles.iFix}>i</span>n<span className={styles.iFix}>i</span>on
-        </span>
-      </span>
-
-      <span className={styles.logoAccent}>Black</span>
-    </div>
+    <span className={`${styles.logo} ${className}`.trim()} aria-label={alt}>
+      <img className={styles.image} src={logoSrc} alt={alt} draggable="false" />
+    </span>
   );
 }

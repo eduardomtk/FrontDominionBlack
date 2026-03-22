@@ -8,6 +8,7 @@ import { getLocale, setLocale as setStoredLocale, localeFromCountry } from "@/i1
 import { useLocale } from "@/context/LocaleContext";
 import { useTranslation } from "react-i18next";
 import useTradingViewport from "@/hooks/useTradingViewport";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -65,163 +66,6 @@ function GoogleLogo() {
 /**
  * ✅ Dominion Black (padrão premium)
  */
-function DominionBrand() {
-  return (
-    <div className={styles.dominionLogo} aria-label="Dominion Black">
-      <span className={styles.dominionMain}>
-        <span className={styles.dominionDWrap}>
-          <span className={styles.dominionD}>D</span>
-
-          <span className={styles.dominionCrownContainer} aria-hidden="true">
-            <span className={styles.dominionParticles} />
-            <span className={styles.dominionCrown}>
-              <span className={`${styles.dominionDiamond} ${styles.dominionBlue}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionRed}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionGreen}`} />
-            </span>
-          </span>
-        </span>
-
-        <span className={styles.dominionRest}>
-          om<span className={styles.iFix}>i</span>n<span className={styles.iFix}>i</span>on
-        </span>
-      </span>
-
-      <span className={styles.dominionAccent}>Black</span>
-    </div>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M6 9l6 6 6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CustomSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder = "Selecionar",
-}) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef(null);
-  const buttonRef = useRef(null);
-  const listRef = useRef(null);
-
-  const selectedOption = options.find((item) => item.code === value);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (!rootRef.current?.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-
-    function handleKeyDown(event) {
-      if (!rootRef.current?.contains(document.activeElement)) return;
-
-      if (event.key === "Escape") {
-        setOpen(false);
-        buttonRef.current?.focus();
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside, { passive: true });
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (open && listRef.current) {
-      const selectedEl = listRef.current.querySelector('[data-selected="true"]');
-      selectedEl?.scrollIntoView({ block: "nearest" });
-    }
-  }, [open]);
-
-  const handleToggle = () => setOpen((prev) => !prev);
-
-  const handleSelect = (nextValue) => {
-    onChange(nextValue);
-    setOpen(false);
-    buttonRef.current?.focus();
-  };
-
-  return (
-    <div className={styles.field}>
-      <label>{label}</label>
-
-      <div
-        className={cn(styles.customSelect, open && styles.customSelectOpen)}
-        ref={rootRef}
-      >
-        <button
-          ref={buttonRef}
-          type="button"
-          className={styles.customSelectTrigger}
-          onClick={handleToggle}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-        >
-          <span className={styles.customSelectValue}>
-            {selectedOption?.name || placeholder}
-          </span>
-
-          <span className={styles.customSelectChevron} aria-hidden="true">
-            <ChevronDownIcon />
-          </span>
-        </button>
-
-        {open && (
-          <div className={styles.customSelectDropdown}>
-            <ul
-              ref={listRef}
-              className={styles.customSelectList}
-              role="listbox"
-              aria-label={label}
-            >
-              {options.map((item) => {
-                const isSelected = item.code === value;
-
-                return (
-                  <li key={item.code} role="option" aria-selected={isSelected}>
-                    <button
-                      type="button"
-                      className={cn(
-                        styles.customSelectOption,
-                        isSelected && styles.customSelectOptionActive
-                      )}
-                      data-selected={isSelected ? "true" : "false"}
-                      onClick={() => handleSelect(item.code)}
-                    >
-                      {item.name}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export default function RegisterPage() {
   const navigate = useNavigate();
   const { signUp, signIn, signInWithGoogle, upsertProfile } = useTradingAuth();
@@ -393,7 +237,7 @@ export default function RegisterPage() {
             )}
           >
             <div className={styles.header}>
-              <DominionBrand />
+              <BrandLogo className={styles.dominionLogo} />
               <div className={styles.subtitle}>Crie sua conta para operar</div>
             </div>
 

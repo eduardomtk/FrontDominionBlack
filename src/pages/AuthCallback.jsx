@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/services/supabaseClient";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ export default function AuthCallback() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", color: "#e5e7eb", background: "#070b12" }}>
       <div style={{ width: "min(520px, 92vw)", padding: 18, borderRadius: 14, border: "1px solid #1f2937", background: "#0b1016" }}>
-        <div style={{ fontWeight: 900, fontSize: 16 }}>TradePro</div>
+        <div style={{ display: "inline-flex", alignItems: "center", fontSize: 18 }}><BrandLogo /></div>
         <div style={{ marginTop: 10, color: "#9aa4b2", fontWeight: 800 }}>{msg}</div>
       </div>
     </div>

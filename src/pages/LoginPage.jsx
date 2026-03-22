@@ -8,6 +8,7 @@ import { supabaseErrorToUserMessage } from "@/services/supabaseErrorPT";
 import { getLocale } from "@/i18n/locale";
 import { useTranslation } from "react-i18next";
 import useTradingViewport from "@/hooks/useTradingViewport";
+import BrandLogo from "@/components/BrandLogo/BrandLogo";
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -59,33 +60,6 @@ function GoogleLogo() {
         d="M43.611 20.083H42V20H24v8h11.303c-.791 2.237-2.231 4.166-4.084 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
       />
     </svg>
-  );
-}
-
-function DominionBrand() {
-  return (
-    <div className={styles.dominionLogo} aria-label="Dominion Black">
-      <span className={styles.dominionMain}>
-        <span className={styles.dominionDWrap}>
-          <span className={styles.dominionD}>D</span>
-
-          <span className={styles.dominionCrownContainer} aria-hidden="true">
-            <span className={styles.dominionParticles} />
-            <span className={styles.dominionCrown}>
-              <span className={`${styles.dominionDiamond} ${styles.dominionBlue}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionRed}`} />
-              <span className={`${styles.dominionDiamond} ${styles.dominionGreen}`} />
-            </span>
-          </span>
-        </span>
-
-        <span className={styles.dominionRest}>
-          om<span className={styles.iFix}>i</span>n<span className={styles.iFix}>i</span>on
-        </span>
-      </span>
-
-      <span className={styles.dominionAccent}>Black</span>
-    </div>
   );
 }
 
@@ -159,7 +133,7 @@ export default function LoginPage() {
 
         <div className={cn(styles.authContent, isMobilePortrait && styles.authContentMobilePortrait)}>
           <div className={styles.header}>
-            <DominionBrand />
+            <BrandLogo className={styles.dominionLogo} />
             <p className={styles.affiliateSubtitle}>{t("login:subtitle")}</p>
           </div>
 
