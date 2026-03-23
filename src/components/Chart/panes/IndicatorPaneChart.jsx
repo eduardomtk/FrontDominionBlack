@@ -472,11 +472,12 @@ export default function IndicatorPaneChart({
     const onReset = (ev) => {
       const d = ev?.detail || {};
       console.log(`[HISTORY_RESET][PANE:${paneType}] sync-only epoch=${d.epoch} sig="${d.sig}"`);
-
       try {
-        if (chartRef.current && masterChart) {
-          applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
-        }
+        requestAnimationFrame(() => {
+          try {
+            applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+          } catch {}
+        });
       } catch {}
     };
 
@@ -489,7 +490,7 @@ export default function IndicatorPaneChart({
         el.removeEventListener(HISTORY_RESET_EVENT, onReset);
       } catch {}
     };
-  }, [masterContainer, masterChart, paneType, priceScaleMinWidth]);
+  }, [masterContainer, paneType, masterChart, priceScaleMinWidth]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -693,7 +694,7 @@ export default function IndicatorPaneChart({
     const el = containerRef.current;
     if (!el) return;
 
-    console.log(`[PANE_INIT:${paneType}] init`);
+    console.log(`[PANE_INIT:${paneType}] mount/sync`);
 
     setIsPaneReady(false);
     pendingPaneApiRef.current = null;
