@@ -164,13 +164,24 @@ export default class ChartBridge {
     const lastClosed = cleanCandles[cleanCandles.length - 1];
     const nextSig = this._makeDataSig(cleanCandles);
 
-    if (this._lastSeriesTime != null && Number(lastClosed.time) < Number(this._lastSeriesTime)) {
+    // ✅ FIX CRÍTICO:
+    // _lastSeriesTime pode estar apontando para o candle LIVE atual (bucket aberto),
+    // que normalmente é 1 bucket à frente do último candle FECHADO.
+    // Em um history_prepend legítimo, o último fechado continua igual, mas o início
+    // do array vai para trás. Se compararmos contra _lastSeriesTime, bloqueamos
+    // exatamente esse setData e o gráfico fica com "espaços vazios": o store cresce,
+    // a viewport passa a enxergar mais barras lógicas, mas a série continua desenhada
+    // só com a janela antiga.
+    //
+    // O bloqueio correto para snapshots fechados é comparar apenas contra o último
+    // fechado já aplicado por setData (_lastSetDataTime), nunca contra o live.
+    if (this._lastSetDataTime != null && Number(lastClosed.time) < Number(this._lastSetDataTime)) {
       return false;
     }
 
     this.series.setData(cleanCandles);
     this._lastSetDataTime = lastClosed.time;
-    this._lastSeriesTime = lastClosed.time;
+    this._lastSeriesTime = Math.max(Number(this._lastSeriesTime ?? 0), Number(lastClosed.time));
     this._lastDataSig = nextSig;
     return true;
   }
