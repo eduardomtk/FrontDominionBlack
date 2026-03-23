@@ -347,8 +347,10 @@ function safeGetRightOffset(chart) {
   return NaN;
 }
 
-function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
+function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72, options = {}) {
   if (!masterChart?.timeScale || !paneChart?.timeScale) return;
+
+  const includeRange = options?.includeRange !== false;
 
   const slaveTS = paneChart.timeScale();
   const opt = {
@@ -372,6 +374,8 @@ function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleW
       minimumWidth: Math.max(1, Math.round(rightScaleMinW)),
     });
   } catch {}
+
+  if (!includeRange) return;
 
   const logical = safeGetLogicalRange(masterChart);
   if (logical) {
@@ -475,7 +479,9 @@ export default function IndicatorPaneChart({
       try {
         requestAnimationFrame(() => {
           try {
-            applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+            // ✅ no history prepend, o broker é o soberano do RANGE.
+            // Aqui sincronizamos só spacing/offset/right-scale para evitar disputa de viewport.
+            applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth, { includeRange: false });
           } catch {}
         });
       } catch {}

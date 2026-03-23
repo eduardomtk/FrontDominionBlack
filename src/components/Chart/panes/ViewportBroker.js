@@ -672,7 +672,15 @@ class ViewportBroker {
         const expected = this._expectedSlaveLogical(ts, master, st);
         const needs = this._needsSync(snap, master, expected);
 
-        if (!needs && reason !== "watchdog") continue;
+        // ✅ watchdog agora é passivo: só corrige quando realmente há drift.
+        // Antes ele reaplicava range mesmo sem necessidade e isso gerava micro-nudges
+        // visíveis nos panes, principalmente perto do limite esquerdo / during prepend.
+        if (!needs) {
+          try {
+            this._applyRightScaleWidthIfNeeded(s?.chart, master);
+          } catch {}
+          continue;
+        }
 
         // ✅ mantém plotArea idêntico ao master (priceScale direita)
         try {
