@@ -226,6 +226,7 @@ class ViewportBroker {
 
     this._watchdogTimer = window.setInterval(() => {
       if (this._disposed) return;
+      if (this._interactionActive) return;
       this.forceSync("watchdog");
     }, 250);
   }
@@ -620,6 +621,11 @@ class ViewportBroker {
       return;
     }
 
+    if (this._interactionActive) {
+      this._sync("masterChange:interactive");
+      return;
+    }
+
     const bi = safeGetBaseIndex(ts);
     let isRollover = false;
 
@@ -672,13 +678,12 @@ class ViewportBroker {
         const expected = this._expectedSlaveLogical(ts, master, st);
         const needs = this._needsSync(snap, master, expected);
 
-        // ✅ mantém plotArea idêntico ao master (priceScale direita),
-        // mas sem reaplicar viewport quando já está sincronizado.
+        if (!needs) continue;
+
+        // ✅ mantém plotArea idêntico ao master (priceScale direita)
         try {
           this._applyRightScaleWidthIfNeeded(s?.chart, master);
         } catch {}
-
-        if (!needs) continue;
 
         this._applyToSlave(ts, master, st);
       }

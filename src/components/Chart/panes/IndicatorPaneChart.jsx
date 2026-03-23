@@ -347,7 +347,7 @@ function safeGetRightOffset(chart) {
   return NaN;
 }
 
-function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72, syncRange = false) {
+function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
   if (!masterChart?.timeScale || !paneChart?.timeScale) return;
 
   const slaveTS = paneChart.timeScale();
@@ -372,8 +372,6 @@ function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleW
       minimumWidth: Math.max(1, Math.round(rightScaleMinW)),
     });
   } catch {}
-
-  if (!syncRange) return;
 
   const logical = safeGetLogicalRange(masterChart);
   if (logical) {

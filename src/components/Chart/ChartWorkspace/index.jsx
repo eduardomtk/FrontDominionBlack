@@ -520,6 +520,8 @@ function WorkspacePanes({
     const state = {
       active: false,
       wheelTimer: 0,
+      releaseRaf1: 0,
+      releaseRaf2: 0,
       winUp: null,
     };
 
@@ -540,12 +542,23 @@ function WorkspacePanes({
         b?.setInteractionActive?.(true);
       } catch {}
 
+      if (state.releaseRaf1) {
+        try {
+          cancelAnimationFrame(state.releaseRaf1);
+        } catch {}
+        state.releaseRaf1 = 0;
+      }
+
+      if (state.releaseRaf2) {
+        try {
+          cancelAnimationFrame(state.releaseRaf2);
+        } catch {}
+        state.releaseRaf2 = 0;
+      }
+
       if (state.active) return;
       state.active = true;
 
-      // O broker já escuta o visibleLogicalRange do master.
-      // Então aqui só sinalizamos a interação e fazemos um sync inicial,
-      // sem entrar em loop por RAF competindo com o próprio drag do chart.
       syncNow(`${why || "interaction"}:start`);
     };
 
@@ -557,6 +570,20 @@ function WorkspacePanes({
         state.wheelTimer = 0;
       }
 
+      if (state.releaseRaf1) {
+        try {
+          cancelAnimationFrame(state.releaseRaf1);
+        } catch {}
+        state.releaseRaf1 = 0;
+      }
+
+      if (state.releaseRaf2) {
+        try {
+          cancelAnimationFrame(state.releaseRaf2);
+        } catch {}
+        state.releaseRaf2 = 0;
+      }
+
       state.active = false;
 
       const b = getBroker();
@@ -564,7 +591,13 @@ function WorkspacePanes({
         b?.setInteractionActive?.(false);
       } catch {}
 
-      syncNow(`${why || "interaction"}:end`);
+      state.releaseRaf1 = requestAnimationFrame(() => {
+        state.releaseRaf1 = 0;
+        state.releaseRaf2 = requestAnimationFrame(() => {
+          state.releaseRaf2 = 0;
+          syncNow(`${why || "interaction"}:end`);
+        });
+      });
     };
 
     const onWheel = () => {
