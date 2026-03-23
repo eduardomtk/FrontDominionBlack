@@ -347,10 +347,8 @@ function safeGetRightOffset(chart) {
   return NaN;
 }
 
-function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72, options = {}) {
+function applyPaneStaticViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
   if (!masterChart?.timeScale || !paneChart?.timeScale) return;
-
-  const includeRange = options?.includeRange !== false;
 
   const slaveTS = paneChart.timeScale();
   const opt = {
@@ -375,22 +373,13 @@ function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleW
     });
   } catch {}
 
-  if (!includeRange) return;
-
-  const logical = safeGetLogicalRange(masterChart);
-  if (logical) {
-    try {
-      slaveTS.setVisibleLogicalRange?.(logical);
-      return;
-    } catch {}
-  }
-
-  const timeRange = safeGetTimeRange(masterChart);
-  if (timeRange) {
-    try {
-      slaveTS.setVisibleRange?.(timeRange);
-    } catch {}
-  }
+  try {
+    const masterOpts = masterChart?.timeScale?.()?.options?.() || {};
+    slaveTS.applyOptions?.({
+      fixLeftEdge: typeof masterOpts.fixLeftEdge === "boolean" ? masterOpts.fixLeftEdge : true,
+      fixRightEdge: typeof masterOpts.fixRightEdge === "boolean" ? masterOpts.fixRightEdge : true,
+    });
+  } catch {}
 }
 
 function getInstanceSignature(inst) {
@@ -479,9 +468,7 @@ export default function IndicatorPaneChart({
       try {
         requestAnimationFrame(() => {
           try {
-            // ✅ no history prepend, o broker é o soberano do RANGE.
-            // Aqui sincronizamos só spacing/offset/right-scale para evitar disputa de viewport.
-            applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth, { includeRange: false });
+            applyPaneStaticViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
           } catch {}
         });
       } catch {}
@@ -497,6 +484,32 @@ export default function IndicatorPaneChart({
       } catch {}
     };
   }, [masterContainer, paneType, masterChart, priceScaleMinWidth]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el?.addEventListener) return;
+
+    const stopWheel = (ev) => {
+      try { ev.preventDefault(); } catch {}
+      try { ev.stopPropagation(); } catch {}
+    };
+
+    const stopDragStart = (ev) => {
+      try { ev.stopPropagation(); } catch {}
+    };
+
+    try { el.addEventListener("wheel", stopWheel, { capture: true, passive: false }); } catch {}
+    try { el.addEventListener("mousedown", stopDragStart, true); } catch {}
+    try { el.addEventListener("pointerdown", stopDragStart, true); } catch {}
+    try { el.addEventListener("touchstart", stopDragStart, { capture: true, passive: true }); } catch {}
+
+    return () => {
+      try { el.removeEventListener("wheel", stopWheel, true); } catch {}
+      try { el.removeEventListener("mousedown", stopDragStart, true); } catch {}
+      try { el.removeEventListener("pointerdown", stopDragStart, true); } catch {}
+      try { el.removeEventListener("touchstart", stopDragStart, true); } catch {}
+    };
+  }, []);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -661,7 +674,7 @@ export default function IndicatorPaneChart({
     didRegisterPaneRef.current = true;
 
     try {
-      applyPaneViewportFromMaster(masterChart, chart, priceScaleMinWidth);
+      applyPaneStaticViewportFromMaster(masterChart, chart, priceScaleMinWidth);
     } catch {}
 
     const cb = onPaneReadyRef.current;
@@ -689,7 +702,7 @@ export default function IndicatorPaneChart({
       revealRaf2Ref.current = requestAnimationFrame(() => {
         revealRaf2Ref.current = 0;
         try {
-          applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+          applyPaneStaticViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
         } catch {}
         setIsPaneReady(true);
       });
@@ -1025,7 +1038,7 @@ export default function IndicatorPaneChart({
     };
 
     try {
-      applyPaneViewportFromMaster(masterChart, chart, priceScaleMinWidth);
+      applyPaneStaticViewportFromMaster(masterChart, chart, priceScaleMinWidth);
     } catch {}
 
     const ro = new ResizeObserver((entries) => {
@@ -1524,6 +1537,8 @@ export default function IndicatorPaneChart({
         height: "100%",
         opacity: isPaneReady ? 1 : 0,
         visibility: isPaneReady ? "visible" : "hidden",
+        touchAction: "none",
+        userSelect: "none",
       }}
     />
   );
