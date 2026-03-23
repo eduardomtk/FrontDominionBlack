@@ -544,15 +544,9 @@ function WorkspacePanes({
       if (state.active) return;
       state.active = true;
 
+      // O broker já escuta mudanças reais do master pelo visible range.
+      // Aqui só marcamos o início da interação e forçamos um sync pontual.
       syncNow(`${why || "interaction"}:start`);
-
-      const tick = () => {
-        if (!state.active) return;
-        syncNow("interaction");
-        state.raf = requestAnimationFrame(tick);
-      };
-
-      state.raf = requestAnimationFrame(tick);
     };
 
     const stop = (why) => {

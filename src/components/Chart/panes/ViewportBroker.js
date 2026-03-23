@@ -188,42 +188,6 @@ function edgeClampedEquivalent(master, slave) {
   return sameLeftEdge || sameRightEdge;
 }
 
-
-function clampLogicalRangeToMasterLimits(range, master) {
-  if (!range) return null;
-
-  const from = Number(range.from);
-  const to = Number(range.to);
-  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return null;
-
-  let nextFrom = from;
-  let nextTo = to;
-
-  if (nextFrom < MASTER_LEFT_EDGE) {
-    const shift = MASTER_LEFT_EDGE - nextFrom;
-    nextFrom += shift;
-    nextTo += shift;
-  }
-
-  const bi = Number(master?.baseIndex);
-  const ro = Number(master?.rightOffset);
-  if (Number.isFinite(bi) && Number.isFinite(ro)) {
-    const maxTo = bi + ro;
-    if (nextTo > maxTo + EDGE_NEAR_EPS) {
-      const shift = nextTo - maxTo;
-      nextFrom -= shift;
-      nextTo -= shift;
-      if (nextFrom < MASTER_LEFT_EDGE) {
-        const pull = MASTER_LEFT_EDGE - nextFrom;
-        nextFrom += pull;
-        nextTo += pull;
-      }
-    }
-  }
-
-  return { from: nextFrom, to: nextTo };
-}
-
 function scheduleDoubleRAF(fn) {
   requestAnimationFrame(() => requestAnimationFrame(fn));
 }
@@ -390,7 +354,7 @@ class ViewportBroker {
     const ts = this.masterTS;
     if (!ts) return null;
 
-    const rawLogicalRange = safeGetVisibleLogicalRange(ts);
+    const logicalRange = safeGetVisibleLogicalRange(ts);
     const timeRange = safeGetVisibleRangeRaw(ts);
 
     const rightOffset = safeGetRightOffset(ts);
@@ -398,8 +362,6 @@ class ViewportBroker {
     const baseIndex = safeGetBaseIndex(ts);
 
     const rightScaleWidth = safeGetRightPriceScaleWidth(this.masterChart);
-
-    const logicalRange = clampLogicalRangeToMasterLimits(rawLogicalRange, { baseIndex, rightOffset }) || rawLogicalRange;
 
     if (!logicalRange && !timeRange) return null;
 
@@ -522,13 +484,10 @@ class ViewportBroker {
     // ✅ Regra soberana: se o master expõe visibleLogicalRange, replica 1:1.
     // (Mas só chamaremos isso quando o slave NÃO estiver atrasado; guard fica em _applyToSlave)
     if (master.logicalRange) {
-      return clampLogicalRangeToMasterLimits(
-        {
-          from: Number(master.logicalRange.from),
-          to: Number(master.logicalRange.to),
-        },
-        master
-      );
+      return {
+        from: Number(master.logicalRange.from),
+        to: Number(master.logicalRange.to),
+      };
     }
 
     const ro = Number.isFinite(master.rightOffset) ? Number(master.rightOffset) : 0;

@@ -347,13 +347,15 @@ function safeGetRightOffset(chart) {
   return NaN;
 }
 
-function applyPaneStaticViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
+function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
   if (!masterChart?.timeScale || !paneChart?.timeScale) return;
 
   const slaveTS = paneChart.timeScale();
   const opt = {
     shiftVisibleRangeOnNewBar: false,
     lockVisibleTimeRangeOnResize: true,
+    fixLeftEdge: true,
+    fixRightEdge: true,
   };
 
   const bs = safeGetBarSpacing(masterChart);
@@ -370,14 +372,6 @@ function applyPaneStaticViewportFromMaster(masterChart, paneChart, fallbackRight
   try {
     paneChart.priceScale("right")?.applyOptions?.({
       minimumWidth: Math.max(1, Math.round(rightScaleMinW)),
-    });
-  } catch {}
-
-  try {
-    const masterOpts = masterChart?.timeScale?.()?.options?.() || {};
-    slaveTS.applyOptions?.({
-      fixLeftEdge: typeof masterOpts.fixLeftEdge === "boolean" ? masterOpts.fixLeftEdge : true,
-      fixRightEdge: typeof masterOpts.fixRightEdge === "boolean" ? masterOpts.fixRightEdge : true,
     });
   } catch {}
 }
@@ -468,7 +462,7 @@ export default function IndicatorPaneChart({
       try {
         requestAnimationFrame(() => {
           try {
-            applyPaneStaticViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+            applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
           } catch {}
         });
       } catch {}
@@ -484,32 +478,6 @@ export default function IndicatorPaneChart({
       } catch {}
     };
   }, [masterContainer, paneType, masterChart, priceScaleMinWidth]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el?.addEventListener) return;
-
-    const stopWheel = (ev) => {
-      try { ev.preventDefault(); } catch {}
-      try { ev.stopPropagation(); } catch {}
-    };
-
-    const stopDragStart = (ev) => {
-      try { ev.stopPropagation(); } catch {}
-    };
-
-    try { el.addEventListener("wheel", stopWheel, { capture: true, passive: false }); } catch {}
-    try { el.addEventListener("mousedown", stopDragStart, true); } catch {}
-    try { el.addEventListener("pointerdown", stopDragStart, true); } catch {}
-    try { el.addEventListener("touchstart", stopDragStart, { capture: true, passive: true }); } catch {}
-
-    return () => {
-      try { el.removeEventListener("wheel", stopWheel, true); } catch {}
-      try { el.removeEventListener("mousedown", stopDragStart, true); } catch {}
-      try { el.removeEventListener("pointerdown", stopDragStart, true); } catch {}
-      try { el.removeEventListener("touchstart", stopDragStart, true); } catch {}
-    };
-  }, []);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -674,7 +642,7 @@ export default function IndicatorPaneChart({
     didRegisterPaneRef.current = true;
 
     try {
-      applyPaneStaticViewportFromMaster(masterChart, chart, priceScaleMinWidth);
+      applyPaneViewportFromMaster(masterChart, chart, priceScaleMinWidth);
     } catch {}
 
     const cb = onPaneReadyRef.current;
@@ -702,7 +670,7 @@ export default function IndicatorPaneChart({
       revealRaf2Ref.current = requestAnimationFrame(() => {
         revealRaf2Ref.current = 0;
         try {
-          applyPaneStaticViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+          applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
         } catch {}
         setIsPaneReady(true);
       });
@@ -1038,7 +1006,7 @@ export default function IndicatorPaneChart({
     };
 
     try {
-      applyPaneStaticViewportFromMaster(masterChart, chart, priceScaleMinWidth);
+      applyPaneViewportFromMaster(masterChart, chart, priceScaleMinWidth);
     } catch {}
 
     const ro = new ResizeObserver((entries) => {
@@ -1537,8 +1505,6 @@ export default function IndicatorPaneChart({
         height: "100%",
         opacity: isPaneReady ? 1 : 0,
         visibility: isPaneReady ? "visible" : "hidden",
-        touchAction: "none",
-        userSelect: "none",
       }}
     />
   );
