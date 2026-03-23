@@ -188,6 +188,25 @@ function edgeClampedEquivalent(master, slave) {
   return sameLeftEdge || sameRightEdge;
 }
 
+function rangeSig(range) {
+  if (!range) return "";
+  const from = Number(range.from);
+  const to = Number(range.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return "";
+  return `${from.toFixed(4)}|${to.toFixed(4)}`;
+}
+
+function masterSyncSig(master) {
+  if (!master) return "";
+  return [
+    rangeSig(master.logicalRange),
+    Number.isFinite(master.rightOffset) ? Number(master.rightOffset).toFixed(4) : "nan",
+    Number.isFinite(master.barSpacing) ? Number(master.barSpacing).toFixed(4) : "nan",
+    Number.isFinite(master.baseIndex) ? Number(master.baseIndex).toFixed(4) : "nan",
+    master.manual ? "manual" : "auto",
+    master.atLiveEdge ? "edge" : "off",
+  ].join("::");
+}
 
 function clampLogicalRangeToMasterLimits(range, master) {
   if (!range) return null;
@@ -334,6 +353,8 @@ class ViewportBroker {
         catchupAttempts: 0,
         lastAppliedMasterBI: NaN,
         lastAppliedSlaveBI: NaN,
+        lastAppliedRangeSig: "",
+        lastAppliedMasterSig: "",
       },
     });
 
@@ -457,11 +478,13 @@ class ViewportBroker {
 
   _applyOptionsIfNeeded(ts, master, slaveSnap) {
     const opt = {};
+    let changed = false;
 
     // ✅ barSpacing sempre replica (zoom consistente)
     if (Number.isFinite(master.barSpacing)) {
       if (!Number.isFinite(slaveSnap.barSpacing) || !near(slaveSnap.barSpacing, master.barSpacing, 1e-3)) {
         opt.barSpacing = master.barSpacing;
+        changed = true;
       }
     }
 
@@ -470,12 +493,14 @@ class ViewportBroker {
     if (Number.isFinite(master.rightOffset)) {
       if (!Number.isFinite(slaveSnap.rightOffset) || !near(slaveSnap.rightOffset, master.rightOffset, 1e-3)) {
         opt.rightOffset = master.rightOffset;
+        changed = true;
       }
     }
 
     opt.shiftVisibleRangeOnNewBar = false;
 
     if (Object.keys(opt).length) safeApplyOptions(ts, opt);
+    return changed;
   }
 
   _applyRightScaleWidthIfNeeded(slaveChart, master) {
@@ -581,7 +606,38 @@ class ViewportBroker {
     const before = this._readSlave(ts);
 
     // ✅ sempre replica zoom/offset quando aplicável
-    this._applyOptionsIfNeeded(ts, master, before);
+    const optionsChanged = this._applyOptionsIfNeeded(ts, master, before);
+
+    const expected = this._expectedSlaveLogical(ts, master, slaveState);
+    const expectedTagged = expected
+      ? { ...expected, __baseIndex: master?.baseIndex, __rightOffset: master?.rightOffset }
+      : null;
+    const expectedSig = rangeSig(expected);
+
+    // ✅ FAST PATH durante interação manual:
+    // aplicar somente 1x por snapshot do master, sem watchdogs extras / doubleRAF.
+    // Isso reduz atraso perceptível e a sensação de “pane correndo atrás”.
+    if (master.manual) {
+      const needsRange =
+        expected &&
+        (!before.logicalRange ||
+          (!logicalEq(before.logicalRange, expected) && !edgeClampedEquivalent(expectedTagged, before.logicalRange)));
+
+      if (needsRange) {
+        safeSetVisibleLogicalRange(ts, expected);
+      }
+
+      slaveState.lastAppliedRangeSig = expectedSig || slaveState.lastAppliedRangeSig;
+      slaveState.lastAppliedMasterSig = masterSyncSig(master);
+
+      if (master.autoScroll && Number.isFinite(master.baseIndex)) {
+        slaveState.lastAppliedMasterBI = Number(master.baseIndex);
+        slaveState.lastAppliedSlaveBI = Number(before.baseIndex);
+      }
+
+      if (!needsRange && !optionsChanged) return;
+      return;
+    }
 
     // ✅ FIX do micro-pulo:
     // Se estamos em realtime (autoScroll) e o slave está atrasado no baseIndex,
@@ -601,8 +657,6 @@ class ViewportBroker {
       return;
     }
 
-    const expected = this._expectedSlaveLogical(ts, master, slaveState);
-
     if (!expected) {
       if (this._shouldCatchupRetry(master, slaveState)) {
         requestAnimationFrame(() => {
@@ -614,6 +668,8 @@ class ViewportBroker {
     }
 
     safeSetVisibleLogicalRange(ts, expected);
+    slaveState.lastAppliedRangeSig = expectedSig;
+    slaveState.lastAppliedMasterSig = masterSyncSig(master);
 
     if (master.autoScroll && Number.isFinite(master.baseIndex)) {
       slaveState.lastAppliedMasterBI = Number(master.baseIndex);
@@ -647,6 +703,7 @@ class ViewportBroker {
           )
         ) {
           safeSetVisibleLogicalRange(ts, expectedAfter);
+          slaveState.lastAppliedRangeSig = rangeSig(expectedAfter);
         }
       }
     });
@@ -702,6 +759,8 @@ class ViewportBroker {
     const master = this._readMaster();
     if (!master) return;
 
+    const masterSig = masterSyncSig(master);
+
     this._syncing = true;
     try {
       for (const [, s] of this.slaves.entries()) {
@@ -709,11 +768,16 @@ class ViewportBroker {
         const st = s?.state;
         if (!ts || !st) continue;
 
+        if (reason !== "watchdog" && st.lastAppliedMasterSig === masterSig) continue;
+
         const snap = this._readSlave(ts);
         const expected = this._expectedSlaveLogical(ts, master, st);
         const needs = this._needsSync(snap, master, expected);
 
-        if (!needs && reason !== "watchdog") continue;
+        if (!needs && reason !== "watchdog") {
+          st.lastAppliedMasterSig = masterSig;
+          continue;
+        }
 
         // ✅ mantém plotArea idêntico ao master (priceScale direita)
         try {
@@ -721,6 +785,7 @@ class ViewportBroker {
         } catch {}
 
         this._applyToSlave(ts, master, st);
+        st.lastAppliedMasterSig = masterSig;
       }
     } finally {
       this._syncing = false;
