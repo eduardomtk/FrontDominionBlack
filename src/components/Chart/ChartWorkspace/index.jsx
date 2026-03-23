@@ -1140,12 +1140,34 @@ function WorkspacePanes({
     }
 
     if (pairCandlesCount > guard.baseCount && pairOldestTime > 0 && guard.oldestTime > 0 && pairOldestTime < guard.oldestTime) {
-      // ✅ FIX CRÍTICO:
-      // O lightweight-charts já preserva a janela visível quando setData()
-      // recebe candles antigas prependadas. Somar manualmente o delta aqui
-      // empurra o usuário para a direita de novo e cria exatamente o sintoma
-      // de "voltar para frente" / parecer preso nas mesmas 1000 velas.
-      // Portanto, ao confirmar que o prepend entrou, apenas desarmamos o guard.
+      const delta = Number(pairCandlesCount) - Number(guard.baseCount || 0);
+      const ts = masterChart?.timeScale?.();
+      const baseRange = guard.range || ts?.getVisibleLogicalRange?.() || null;
+
+      if (
+        ts &&
+        delta > 0 &&
+        Number.isFinite(Number(baseRange?.from)) &&
+        Number.isFinite(Number(baseRange?.to))
+      ) {
+        const nextRange = {
+          from: Number(baseRange.from) + delta,
+          to: Number(baseRange.to) + delta,
+        };
+
+        try {
+          requestAnimationFrame(() => {
+            try {
+              ts.setVisibleLogicalRange?.(nextRange);
+            } catch {}
+          });
+        } catch {
+          try {
+            ts.setVisibleLogicalRange?.(nextRange);
+          } catch {}
+        }
+      }
+
       prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
       return;
     }
@@ -1153,7 +1175,7 @@ function WorkspacePanes({
     if (!pairLoadMorePending && Date.now() - Number(guard.requestedAt || 0) > 300) {
       prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
     }
-  }, [pairCandlesCount, pairLoadMorePending, pairOldestTime, runtimeChartKey]);
+  }, [masterChart, pairCandlesCount, pairLoadMorePending, pairOldestTime, runtimeChartKey]);
 
   useEffect(() => {
     const chart = masterChart;
