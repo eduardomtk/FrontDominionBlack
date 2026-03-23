@@ -368,7 +368,7 @@ export default function MainChart({
   const bootSeedRef = useRef(null);
   const bootSeedKeyRef = useRef("");
 
-  const lbDataRef = useRef({ seeded: false, lastClosedTime: null });
+  const lbDataRef = useRef({ seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null });
   const lbPendingLiveRef = useRef(null);
 
   const lastMarkerRef = useRef({ time: null, price: null });
@@ -477,6 +477,8 @@ export default function MainChart({
         lbDataRef.current = {
           seeded: lineData.length > 0,
           lastClosedTime: lineData.length ? Number(lineData[lineData.length - 1]?.time) : null,
+          lastClosedCount: lineData.length,
+          firstClosedTime: lineData.length ? Number(lineData[0]?.time) : null,
         };
       } else if (type === "bars") {
         const barData = closed
@@ -504,6 +506,8 @@ export default function MainChart({
         lbDataRef.current = {
           seeded: barData.length > 0,
           lastClosedTime: barData.length ? Number(barData[barData.length - 1]?.time) : null,
+          lastClosedCount: barData.length,
+          firstClosedTime: barData.length ? Number(barData[0]?.time) : null,
         };
       } else {
         bridge?.setRenderMode?.(type === "heikin" ? "heikin" : "candles");
@@ -1501,7 +1505,7 @@ export default function MainChart({
       lastMarkerRef.current = { time: null, price: null };
       lastClosedCandlesRef.current = [];
       lastLiveCandleRef.current = null;
-      lbDataRef.current = { seeded: false, lastClosedTime: null };
+      lbDataRef.current = { seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null };
       lbPendingLiveRef.current = null;
       resetLineBarsViewportController();
       lastEngineObjRef.current = null;
@@ -1887,7 +1891,7 @@ export default function MainChart({
       seriesRef.current = null;
     }
 
-    lbDataRef.current = { seeded: false, lastClosedTime: null };
+    lbDataRef.current = { seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null };
     lbPendingLiveRef.current = null;
     resetLineBarsViewportController();
     resetOverlayRuntime({ clearVisual: false, rebuild: true });
@@ -1937,7 +1941,7 @@ export default function MainChart({
     if (engineChanged) {
       lastEngineObjRef.current = engine;
 
-      lbDataRef.current = { seeded: false, lastClosedTime: null };
+      lbDataRef.current = { seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null };
       lbPendingLiveRef.current = null;
       resetLineBarsViewportController();
       resetOverlayRuntime({ clearVisual: false, rebuild: true });
@@ -1975,7 +1979,7 @@ export default function MainChart({
       lastHistoryMetaRef.current = { armed: false, type: "", n: 0, ft: NaN, lt: NaN, step: 60 };
       forceChartScaleRecovery();
     } else {
-      lbDataRef.current = { seeded: false, lastClosedTime: null };
+      lbDataRef.current = { seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null };
       lbPendingLiveRef.current = null;
       resetLineBarsViewportController();
       resetOverlayRuntime({ clearVisual: false });
@@ -2028,13 +2032,19 @@ export default function MainChart({
         }
 
         if (closed.length) {
+          const firstT = Number(closed[0]?.time);
           const lastT = Number(closed[closed.length - 1]?.time);
           const mustSeed = !st.seeded;
-          const changed = Number.isFinite(lastT) && st.lastClosedTime !== lastT;
+          const changedLast = Number.isFinite(lastT) && st.lastClosedTime !== lastT;
+          const changedCount = Number(closed.length) !== Number(st.lastClosedCount || 0);
+          const changedFirst = Number.isFinite(firstT) && Number(st.firstClosedTime) !== firstT;
+          const needsResetData = mustSeed || changedLast || changedCount || changedFirst;
 
-          if (mustSeed || changed) {
+          if (needsResetData) {
             st.seeded = true;
             st.lastClosedTime = Number.isFinite(lastT) ? lastT : st.lastClosedTime;
+            st.lastClosedCount = closed.length;
+            st.firstClosedTime = Number.isFinite(firstT) ? firstT : st.firstClosedTime;
 
             const lineData = closed
               .map((c) => ({ time: Number(c.time), value: Number(c.close) }))
@@ -2096,13 +2106,19 @@ export default function MainChart({
         }
 
         if (closed.length) {
+          const firstT = Number(closed[0]?.time);
           const lastT = Number(closed[closed.length - 1]?.time);
           const mustSeed = !st.seeded;
-          const changed = Number.isFinite(lastT) && st.lastClosedTime !== lastT;
+          const changedLast = Number.isFinite(lastT) && st.lastClosedTime !== lastT;
+          const changedCount = Number(closed.length) !== Number(st.lastClosedCount || 0);
+          const changedFirst = Number.isFinite(firstT) && Number(st.firstClosedTime) !== firstT;
+          const needsResetData = mustSeed || changedLast || changedCount || changedFirst;
 
-          if (mustSeed || changed) {
+          if (needsResetData) {
             st.seeded = true;
             st.lastClosedTime = Number.isFinite(lastT) ? lastT : st.lastClosedTime;
+            st.lastClosedCount = closed.length;
+            st.firstClosedTime = Number.isFinite(firstT) ? firstT : st.firstClosedTime;
 
             const barData = closed
               .map((c) => ({
