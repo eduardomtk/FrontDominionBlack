@@ -519,9 +519,8 @@ function WorkspacePanes({
 
     const state = {
       active: false,
+      raf: 0,
       wheelTimer: 0,
-      releaseRaf1: 0,
-      releaseRaf2: 0,
       winUp: null,
     };
 
@@ -542,24 +541,18 @@ function WorkspacePanes({
         b?.setInteractionActive?.(true);
       } catch {}
 
-      if (state.releaseRaf1) {
-        try {
-          cancelAnimationFrame(state.releaseRaf1);
-        } catch {}
-        state.releaseRaf1 = 0;
-      }
-
-      if (state.releaseRaf2) {
-        try {
-          cancelAnimationFrame(state.releaseRaf2);
-        } catch {}
-        state.releaseRaf2 = 0;
-      }
-
       if (state.active) return;
       state.active = true;
 
       syncNow(`${why || "interaction"}:start`);
+
+      const tick = () => {
+        if (!state.active) return;
+        syncNow("interaction");
+        state.raf = requestAnimationFrame(tick);
+      };
+
+      state.raf = requestAnimationFrame(tick);
     };
 
     const stop = (why) => {
@@ -570,18 +563,11 @@ function WorkspacePanes({
         state.wheelTimer = 0;
       }
 
-      if (state.releaseRaf1) {
+      if (state.raf) {
         try {
-          cancelAnimationFrame(state.releaseRaf1);
+          cancelAnimationFrame(state.raf);
         } catch {}
-        state.releaseRaf1 = 0;
-      }
-
-      if (state.releaseRaf2) {
-        try {
-          cancelAnimationFrame(state.releaseRaf2);
-        } catch {}
-        state.releaseRaf2 = 0;
+        state.raf = 0;
       }
 
       state.active = false;
@@ -591,13 +577,7 @@ function WorkspacePanes({
         b?.setInteractionActive?.(false);
       } catch {}
 
-      state.releaseRaf1 = requestAnimationFrame(() => {
-        state.releaseRaf1 = 0;
-        state.releaseRaf2 = requestAnimationFrame(() => {
-          state.releaseRaf2 = 0;
-          syncNow(`${why || "interaction"}:end`);
-        });
-      });
+      syncNow(`${why || "interaction"}:end`);
     };
 
     const onWheel = () => {

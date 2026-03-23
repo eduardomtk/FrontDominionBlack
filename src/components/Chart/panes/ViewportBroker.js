@@ -188,6 +188,42 @@ function edgeClampedEquivalent(master, slave) {
   return sameLeftEdge || sameRightEdge;
 }
 
+
+function clampLogicalRangeToMasterLimits(range, master) {
+  if (!range) return null;
+
+  const from = Number(range.from);
+  const to = Number(range.to);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return null;
+
+  let nextFrom = from;
+  let nextTo = to;
+
+  if (nextFrom < MASTER_LEFT_EDGE) {
+    const shift = MASTER_LEFT_EDGE - nextFrom;
+    nextFrom += shift;
+    nextTo += shift;
+  }
+
+  const bi = Number(master?.baseIndex);
+  const ro = Number(master?.rightOffset);
+  if (Number.isFinite(bi) && Number.isFinite(ro)) {
+    const maxTo = bi + ro;
+    if (nextTo > maxTo + EDGE_NEAR_EPS) {
+      const shift = nextTo - maxTo;
+      nextFrom -= shift;
+      nextTo -= shift;
+      if (nextFrom < MASTER_LEFT_EDGE) {
+        const pull = MASTER_LEFT_EDGE - nextFrom;
+        nextFrom += pull;
+        nextTo += pull;
+      }
+    }
+  }
+
+  return { from: nextFrom, to: nextTo };
+}
+
 function scheduleDoubleRAF(fn) {
   requestAnimationFrame(() => requestAnimationFrame(fn));
 }
@@ -226,7 +262,6 @@ class ViewportBroker {
 
     this._watchdogTimer = window.setInterval(() => {
       if (this._disposed) return;
-      if (this._interactionActive) return;
       this.forceSync("watchdog");
     }, 250);
   }
@@ -355,7 +390,7 @@ class ViewportBroker {
     const ts = this.masterTS;
     if (!ts) return null;
 
-    const logicalRange = safeGetVisibleLogicalRange(ts);
+    const rawLogicalRange = safeGetVisibleLogicalRange(ts);
     const timeRange = safeGetVisibleRangeRaw(ts);
 
     const rightOffset = safeGetRightOffset(ts);
@@ -363,6 +398,8 @@ class ViewportBroker {
     const baseIndex = safeGetBaseIndex(ts);
 
     const rightScaleWidth = safeGetRightPriceScaleWidth(this.masterChart);
+
+    const logicalRange = clampLogicalRangeToMasterLimits(rawLogicalRange, { baseIndex, rightOffset }) || rawLogicalRange;
 
     if (!logicalRange && !timeRange) return null;
 
@@ -485,10 +522,13 @@ class ViewportBroker {
     // ✅ Regra soberana: se o master expõe visibleLogicalRange, replica 1:1.
     // (Mas só chamaremos isso quando o slave NÃO estiver atrasado; guard fica em _applyToSlave)
     if (master.logicalRange) {
-      return {
-        from: Number(master.logicalRange.from),
-        to: Number(master.logicalRange.to),
-      };
+      return clampLogicalRangeToMasterLimits(
+        {
+          from: Number(master.logicalRange.from),
+          to: Number(master.logicalRange.to),
+        },
+        master
+      );
     }
 
     const ro = Number.isFinite(master.rightOffset) ? Number(master.rightOffset) : 0;
@@ -621,11 +661,6 @@ class ViewportBroker {
       return;
     }
 
-    if (this._interactionActive) {
-      this._sync("masterChange:interactive");
-      return;
-    }
-
     const bi = safeGetBaseIndex(ts);
     let isRollover = false;
 
@@ -678,7 +713,7 @@ class ViewportBroker {
         const expected = this._expectedSlaveLogical(ts, master, st);
         const needs = this._needsSync(snap, master, expected);
 
-        if (!needs) continue;
+        if (!needs && reason !== "watchdog") continue;
 
         // ✅ mantém plotArea idêntico ao master (priceScale direita)
         try {
