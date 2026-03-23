@@ -519,7 +519,6 @@ function WorkspacePanes({
 
     const state = {
       active: false,
-      raf: 0,
       wheelTimer: 0,
       winUp: null,
     };
@@ -544,8 +543,9 @@ function WorkspacePanes({
       if (state.active) return;
       state.active = true;
 
-      // O broker já escuta mudanças reais do master pelo visible range.
-      // Aqui só marcamos o início da interação e forçamos um sync pontual.
+      // O broker já escuta o visibleLogicalRange do master.
+      // Então aqui só sinalizamos a interação e fazemos um sync inicial,
+      // sem entrar em loop por RAF competindo com o próprio drag do chart.
       syncNow(`${why || "interaction"}:start`);
     };
 
@@ -555,13 +555,6 @@ function WorkspacePanes({
           clearTimeout(state.wheelTimer);
         } catch {}
         state.wheelTimer = 0;
-      }
-
-      if (state.raf) {
-        try {
-          cancelAnimationFrame(state.raf);
-        } catch {}
-        state.raf = 0;
       }
 
       state.active = false;

@@ -672,12 +672,13 @@ class ViewportBroker {
         const expected = this._expectedSlaveLogical(ts, master, st);
         const needs = this._needsSync(snap, master, expected);
 
-        if (!needs && reason !== "watchdog") continue;
-
-        // ✅ mantém plotArea idêntico ao master (priceScale direita)
+        // ✅ mantém plotArea idêntico ao master (priceScale direita),
+        // mas sem reaplicar viewport quando já está sincronizado.
         try {
           this._applyRightScaleWidthIfNeeded(s?.chart, master);
         } catch {}
+
+        if (!needs) continue;
 
         this._applyToSlave(ts, master, st);
       }

@@ -347,15 +347,13 @@ function safeGetRightOffset(chart) {
   return NaN;
 }
 
-function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72) {
+function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleWidth = 72, syncRange = false) {
   if (!masterChart?.timeScale || !paneChart?.timeScale) return;
 
   const slaveTS = paneChart.timeScale();
   const opt = {
     shiftVisibleRangeOnNewBar: false,
     lockVisibleTimeRangeOnResize: true,
-    fixLeftEdge: true,
-    fixRightEdge: true,
   };
 
   const bs = safeGetBarSpacing(masterChart);
@@ -374,6 +372,23 @@ function applyPaneViewportFromMaster(masterChart, paneChart, fallbackRightScaleW
       minimumWidth: Math.max(1, Math.round(rightScaleMinW)),
     });
   } catch {}
+
+  if (!syncRange) return;
+
+  const logical = safeGetLogicalRange(masterChart);
+  if (logical) {
+    try {
+      slaveTS.setVisibleLogicalRange?.(logical);
+      return;
+    } catch {}
+  }
+
+  const timeRange = safeGetTimeRange(masterChart);
+  if (timeRange) {
+    try {
+      slaveTS.setVisibleRange?.(timeRange);
+    } catch {}
+  }
 }
 
 function getInstanceSignature(inst) {
