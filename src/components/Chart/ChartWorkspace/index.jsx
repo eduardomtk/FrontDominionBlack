@@ -1140,17 +1140,12 @@ function WorkspacePanes({
     }
 
     if (pairCandlesCount > guard.baseCount && pairOldestTime > 0 && guard.oldestTime > 0 && pairOldestTime < guard.oldestTime) {
-      const delta = pairCandlesCount - guard.baseCount;
-      const ts = masterChart?.timeScale?.();
-      const range = guard.range;
-      if (ts && range && delta > 0) {
-        try {
-          ts.setVisibleLogicalRange?.({
-            from: Number(range.from) + delta,
-            to: Number(range.to) + delta,
-          });
-        } catch {}
-      }
+      // ✅ FIX CRÍTICO:
+      // O lightweight-charts já preserva a janela visível quando setData()
+      // recebe candles antigas prependadas. Somar manualmente o delta aqui
+      // empurra o usuário para a direita de novo e cria exatamente o sintoma
+      // de "voltar para frente" / parecer preso nas mesmas 1000 velas.
+      // Portanto, ao confirmar que o prepend entrou, apenas desarmamos o guard.
       prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
       return;
     }
@@ -1158,7 +1153,7 @@ function WorkspacePanes({
     if (!pairLoadMorePending && Date.now() - Number(guard.requestedAt || 0) > 300) {
       prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
     }
-  }, [masterChart, pairCandlesCount, pairLoadMorePending, pairOldestTime, runtimeChartKey]);
+  }, [pairCandlesCount, pairLoadMorePending, pairOldestTime, runtimeChartKey]);
 
   useEffect(() => {
     const chart = masterChart;
