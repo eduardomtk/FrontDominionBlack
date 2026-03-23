@@ -416,7 +416,6 @@ export default function IndicatorPaneChart({
   const unsubRef = useRef(null);
   const roRef = useRef(null);
 
-  const [paneEpoch, setPaneEpoch] = useState(0);
   const [isPaneReady, setIsPaneReady] = useState(false);
 
   const pendingPaneApiRef = useRef(null);
@@ -472,8 +471,13 @@ export default function IndicatorPaneChart({
 
     const onReset = (ev) => {
       const d = ev?.detail || {};
-      console.log(`[HISTORY_RESET][PANE:${paneType}] recebeu epoch=${d.epoch} sig="${d.sig}"`);
-      setPaneEpoch((x) => x + 1);
+      console.log(`[HISTORY_RESET][PANE:${paneType}] sync-only epoch=${d.epoch} sig="${d.sig}"`);
+
+      try {
+        if (chartRef.current && masterChart) {
+          applyPaneViewportFromMaster(masterChart, chartRef.current, priceScaleMinWidth);
+        }
+      } catch {}
     };
 
     try {
@@ -485,7 +489,7 @@ export default function IndicatorPaneChart({
         el.removeEventListener(HISTORY_RESET_EVENT, onReset);
       } catch {}
     };
-  }, [masterContainer, paneType]);
+  }, [masterContainer, masterChart, paneType, priceScaleMinWidth]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -689,7 +693,7 @@ export default function IndicatorPaneChart({
     const el = containerRef.current;
     if (!el) return;
 
-    console.log(`[PANE_INIT:${paneType}] rebuild epoch=${paneEpoch}`);
+    console.log(`[PANE_INIT:${paneType}] init`);
 
     setIsPaneReady(false);
     pendingPaneApiRef.current = null;
@@ -1075,7 +1079,7 @@ export default function IndicatorPaneChart({
       chartRef.current = null;
       seriesRefs.current = {};
     };
-  }, [paneType, showTimeScale, priceScaleMinWidth, masterChart, paneEpoch]);
+  }, [paneType, showTimeScale, priceScaleMinWidth, masterChart]);
 
   useEffect(() => {
     if (!engine) return;
@@ -1503,7 +1507,7 @@ export default function IndicatorPaneChart({
       } catch {}
       unsubRef.current = null;
     };
-  }, [engine, paneType, relevantInstances, paneEpoch]);
+  }, [engine, paneType, relevantInstances]);
 
   return (
     <div
