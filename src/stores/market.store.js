@@ -468,8 +468,14 @@ function scheduleHistoryCommit({ key, sessionId, set, get }) {
     const cur = st.pairs?.[key];
     if (!cur) return;
 
-    const candles = buffer.slice(0);
-    const last = candles.length ? candles[candles.length - 1] : null;
+    const timeframe = String(cur.timeframe || key.split("|")[1] || "M1").toUpperCase().trim();
+    const mergedCandles = mergeCandles(
+      Array.isArray(cur.candles) ? cur.candles : [],
+      buffer,
+      getFrontHistoryLimit(timeframe)
+    );
+
+    const last = mergedCandles.length ? mergedCandles[mergedCandles.length - 1] : null;
     const lastT = last ? Number(last.time) : 0;
 
     let nextLive = cur.liveCandle;
@@ -481,16 +487,25 @@ function scheduleHistoryCommit({ key, sessionId, set, get }) {
       const current = state.pairs?.[key];
       if (!current) return state;
 
+      const limit = getFrontHistoryLimit(current.timeframe);
+      const nextCandles = mergeCandles(
+        Array.isArray(current.candles) ? current.candles : [],
+        mergedCandles,
+        limit
+      );
+      const nextLast = nextCandles.length ? nextCandles[nextCandles.length - 1] : null;
+      const nextLastT = nextLast ? Number(nextLast.time) : 0;
+
       return {
         pairs: {
           ...state.pairs,
           [key]: {
             ...current,
-            candles,
+            candles: nextCandles,
             liveCandle: nextLive,
             isLoadingHistory: false,
-            _lastHistoryTime: Number.isFinite(lastT)
-              ? Math.max(Number(current._lastHistoryTime || 0), lastT)
+            _lastHistoryTime: Number.isFinite(nextLastT)
+              ? Math.max(Number(current._lastHistoryTime || 0), nextLastT)
               : Number(current._lastHistoryTime || 0),
             _historySessionId: Number(sessionId || 0),
             _historyLoadMorePending: false,
@@ -500,11 +515,11 @@ function scheduleHistoryCommit({ key, sessionId, set, get }) {
       };
     });
 
-    persistHistorySnapshot(key, candles, nextLive, { timeframe: cur.timeframe, timeframeSec: cur.timeframeSec });
+    persistHistorySnapshot(key, mergedCandles, nextLive, { timeframe: cur.timeframe, timeframeSec: cur.timeframeSec });
     dispatchTradingReady("tp:candlesReady", {
       key,
       source: "history_commit",
-      candles: candles.length,
+      candles: mergedCandles.length,
       lastTime: Number.isFinite(lastT) ? lastT : 0,
     });
 

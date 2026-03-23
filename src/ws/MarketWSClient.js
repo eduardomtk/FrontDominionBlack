@@ -358,6 +358,8 @@ export default class MarketWSClient {
             this._normalizeTimeframe(payload?.tf) ||
             this._inferTimeframeForSymbol(symbol);
 
+          console.log(`[WS_IN] history_prepend ${symbol} (${tf || "M1"}) +${candles.length}`);
+
           this.onMarketEvent?.({
             type: "history_prepend",
             pair: symbol,
