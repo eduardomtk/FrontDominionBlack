@@ -522,13 +522,57 @@ function WorkspacePanes({
       raf: 0,
       wheelTimer: 0,
       winUp: null,
+      lastViewportSig: "",
+      unchangedFrames: 0,
     };
 
     const getBroker = () => viewportBrokerRef.current;
 
-    const syncNow = (why) => {
+    const readMasterViewportSig = () => {
+      const chart = masterChartRef.current;
+      const ts = chart?.timeScale?.();
+      if (!ts) return "";
+
+      try {
+        const lr = ts.getVisibleLogicalRange?.();
+        const from = Number(lr?.from);
+        const to = Number(lr?.to);
+        const bi = Number(ts.baseIndex?.());
+        const sp = Number(ts.barSpacing?.());
+        const ro = Number(ts.rightOffset?.());
+
+        return [
+          Number.isFinite(from) ? from.toFixed(4) : "nan",
+          Number.isFinite(to) ? to.toFixed(4) : "nan",
+          Number.isFinite(bi) ? bi.toFixed(2) : "nan",
+          Number.isFinite(sp) ? sp.toFixed(3) : "nan",
+          Number.isFinite(ro) ? ro.toFixed(3) : "nan",
+        ].join("|");
+      } catch {
+        return "";
+      }
+    };
+
+    const syncNow = (why, { force = false } = {}) => {
       const b = getBroker();
       if (!b) return;
+
+      if (!force) {
+        const sig = readMasterViewportSig();
+        if (sig && sig === state.lastViewportSig) {
+          state.unchangedFrames += 1;
+          // Em drag/wheel pesado, evita re-sincronizar panes quando o viewport do master
+          // ainda não mudou de fato naquele frame. Mantemos um refresh eventual de segurança.
+          if (state.unchangedFrames < 2) return;
+        } else {
+          state.lastViewportSig = sig;
+          state.unchangedFrames = 0;
+        }
+      } else {
+        state.lastViewportSig = readMasterViewportSig();
+        state.unchangedFrames = 0;
+      }
+
       try {
         if (typeof b.forceSyncNow === "function") b.forceSyncNow(why);
         else b.forceSync?.(why);
@@ -544,7 +588,10 @@ function WorkspacePanes({
       if (state.active) return;
       state.active = true;
 
-      syncNow(`${why || "interaction"}:start`);
+      state.lastViewportSig = "";
+      state.unchangedFrames = 0;
+
+      syncNow(`${why || "interaction"}:start`, { force: true });
 
       const tick = () => {
         if (!state.active) return;
@@ -577,7 +624,10 @@ function WorkspacePanes({
         b?.setInteractionActive?.(false);
       } catch {}
 
-      syncNow(`${why || "interaction"}:end`);
+      state.lastViewportSig = "";
+      state.unchangedFrames = 0;
+
+      syncNow(`${why || "interaction"}:end`, { force: true });
     };
 
     const onWheel = () => {

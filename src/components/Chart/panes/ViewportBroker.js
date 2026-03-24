@@ -280,18 +280,9 @@ class ViewportBroker {
     }
 
     this._watchdogTimer = window.setInterval(() => {
-      if (!this._shouldRunWatchdog()) return;
+      if (this._disposed) return;
       this.forceSync("watchdog");
     }, 250);
-  }
-
-  _shouldRunWatchdog() {
-    if (this._disposed) return false;
-    // Durante drag/wheel, o broker já recebe snapshots novos a cada frame.
-    // Evitar o watchdog aqui reduz trabalho redundante e ajuda a cortar micro-lags.
-    if (this._interactionActive) return false;
-    if (this._raf) return false;
-    return true;
   }
 
   dispose() {
@@ -364,8 +355,6 @@ class ViewportBroker {
         lastAppliedSlaveBI: NaN,
         lastAppliedRangeSig: "",
         lastAppliedMasterSig: "",
-        lastAppliedRightScaleWidth: NaN,
-        lastMasterRightScaleWidth: NaN,
       },
     });
 
@@ -391,11 +380,6 @@ class ViewportBroker {
       try {
         slaveChart.priceScale("right")?.applyOptions?.({ minimumWidth: Math.max(1, Math.round(mw)) });
       } catch {}
-      const slave = this.slaves.get(sid);
-      if (slave?.state) {
-        slave.state.lastAppliedRightScaleWidth = Math.max(1, Math.round(mw));
-        slave.state.lastMasterRightScaleWidth = Number(mw);
-      }
     }
 
     scheduleDoubleRAF(() => {
@@ -519,23 +503,11 @@ class ViewportBroker {
     return changed;
   }
 
-  _applyRightScaleWidthIfNeeded(slaveChart, master, slaveState) {
+  _applyRightScaleWidthIfNeeded(slaveChart, master) {
     if (!slaveChart?.priceScale) return;
 
     const mw = Number(master?.rightScaleWidth);
     if (!Number.isFinite(mw) || mw <= 0) return;
-
-    // Cacheia a largura aplicada: evita consultar width()/options() em todo frame,
-    // o que pesa desnecessariamente durante arrastos muito rápidos.
-    if (
-      slaveState &&
-      Number.isFinite(slaveState.lastMasterRightScaleWidth) &&
-      Math.abs(Number(slaveState.lastMasterRightScaleWidth) - mw) <= 0.5 &&
-      Number.isFinite(slaveState.lastAppliedRightScaleWidth) &&
-      slaveState.lastAppliedRightScaleWidth > 0
-    ) {
-      return;
-    }
 
     let cur = NaN;
     try {
@@ -548,17 +520,11 @@ class ViewportBroker {
       } catch {}
     }
 
-    const nextWidth = Math.max(1, Math.round(mw));
     if (!Number.isFinite(cur) || Math.abs(cur - mw) > 0.5) {
       try {
-        slaveChart.priceScale("right")?.applyOptions?.({ minimumWidth: nextWidth });
+        slaveChart.priceScale("right")?.applyOptions?.({ minimumWidth: Math.max(1, Math.round(mw)) });
       } catch {}
-      if (slaveState) slaveState.lastAppliedRightScaleWidth = nextWidth;
-    } else if (slaveState) {
-      slaveState.lastAppliedRightScaleWidth = Number(cur);
     }
-
-    if (slaveState) slaveState.lastMasterRightScaleWidth = mw;
   }
 
   _shouldCatchupRetry(master, slaveState) {
@@ -802,7 +768,7 @@ class ViewportBroker {
         const st = s?.state;
         if (!ts || !st) continue;
 
-        if (st.lastAppliedMasterSig === masterSig) continue;
+        if (reason !== "watchdog" && st.lastAppliedMasterSig === masterSig) continue;
 
         const snap = this._readSlave(ts);
         const expected = this._expectedSlaveLogical(ts, master, st);
@@ -815,7 +781,7 @@ class ViewportBroker {
 
         // ✅ mantém plotArea idêntico ao master (priceScale direita)
         try {
-          this._applyRightScaleWidthIfNeeded(s?.chart, master, st);
+          this._applyRightScaleWidthIfNeeded(s?.chart, master);
         } catch {}
 
         this._applyToSlave(ts, master, st);
