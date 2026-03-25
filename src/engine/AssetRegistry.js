@@ -75,10 +75,10 @@ export function getAssetBySymbol(symbol) {
  */
 export function getPayoutBySymbol(symbol) {
   const normalized = String(symbol || "").trim().toUpperCase();
-  if (!normalized) return 0.7;
+  if (!normalized) return 0.92;
 
   const dynamic = usePayoutStore.getState().payouts[normalized];
   if (typeof dynamic === "number") return dynamic;
 
-  return ASSET_MAP[normalized]?.payout ?? 0.7;
+  return ASSET_MAP[normalized]?.payout ?? 0.92;
 }

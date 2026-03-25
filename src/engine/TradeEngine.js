@@ -86,7 +86,7 @@ export default class TradeEngine {
       return fallback;
     }
 
-    return 0.7;
+    return 0.92;
   }
 
   // --------------------------
