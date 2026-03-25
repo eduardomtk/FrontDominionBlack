@@ -11,7 +11,6 @@ import {
 import { usePairUI } from "./PairUIContext";
 import { useMarketStore } from "@/stores/market.store";
 import CandleEngine from "../engine/CandleEngine";
-import { useTrade } from "./TradeContext";
 
 const CandleContext = createContext(null);
 
@@ -52,19 +51,23 @@ export function CandleEngineProvider({ children }) {
     return `${symbolKey}|${tfKey}`;
   }, [symbolKey, tfKey]);
 
+  const pinnedMap = useMarketStore((s) => s.pinned || {});
+
   const activePairKeys = useMemo(() => {
     const set = new Set();
     if (currentPairKey) set.add(currentPairKey);
 
-    try {
-      const pinned = useMarketStore.getState?.().pinned || {};
-      for (const [key, count] of Object.entries(pinned)) {
-        if (Number(count) > 0 && key) set.add(String(key));
-      }
-    } catch {}
+    for (const [rawKey, count] of Object.entries(pinnedMap || {})) {
+      if (!rawKey || Number(count) <= 0) continue;
+      const [pair, tf] = String(rawKey).split("|");
+      const normalizedPair = normalizePair(pair);
+      const normalizedTf = normalizeTf(tf);
+      if (!normalizedPair || !normalizedTf) continue;
+      set.add(`${normalizedPair}|${normalizedTf}`);
+    }
 
     return set;
-  }, [currentPairKey, engineVersion]);
+  }, [currentPairKey, pinnedMap]);
 
   // ============================================================
   // ✅ Anti-rollback shield (por pairKey)
@@ -309,27 +312,9 @@ export function CandleEngineProvider({ children }) {
       applySnapshotToEngine(pairKey, pairData);
     };
 
-    const syncPinnedEngines = () => {
-      try {
-        const pinned = useMarketStore.getState?.().pinned || {};
-        let changed = false;
-
-        for (const [key, count] of Object.entries(pinned)) {
-          if (Number(count) <= 0 || !key) continue;
-          if (enginesRef.current.has(key)) continue;
-          const created = ensureEngine(key);
-          if (created) changed = true;
-        }
-
-        if (changed) setEngineVersion((v) => v + 1);
-      } catch {}
-    };
-
-    syncPinnedEngines();
     for (const k of enginesRef.current.keys()) applyKey(k);
 
     const unsub = useMarketStore.subscribe(() => {
-      syncPinnedEngines();
       for (const k of enginesRef.current.keys()) applyKey(k);
     });
 
@@ -338,7 +323,7 @@ export function CandleEngineProvider({ children }) {
         unsub?.();
       } catch {}
     };
-  }, [applySnapshotToEngine, ensureEngine]);
+  }, [applySnapshotToEngine]);
 
   const currentEngine = useMemo(() => {
     if (!currentKey) return null;

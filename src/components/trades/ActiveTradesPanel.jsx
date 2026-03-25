@@ -91,7 +91,7 @@ const ActiveTradesPanel = () => {
               className={`${styles.tradeCard} ${styles[trade.direction.toLowerCase()]}`}
             >
               <div className={styles.left}>
-                <span className={styles.direction}>{trade.direction}</span>
+                <span className={styles.direction}>{trade.symbol || trade.asset || trade.direction}</span>
                 <span className={styles.amount}>R$ {trade.amount.toFixed(2)}</span>
               </div>
 
