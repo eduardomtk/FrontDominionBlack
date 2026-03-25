@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import styles from "./ActiveTradesPanel.module.css";
 import { useTrade } from "../../context/TradeContext";
+import { useMarketStore } from "../../stores/market.store";
 // ✅ i18n
 import { useTranslation } from "react-i18next";
 
@@ -10,26 +11,32 @@ const ActiveTradesPanel = () => {
   const { t } = useTranslation("activeTradesPanel");
   
   const { activeTrades } = useTrade();
+  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
+
+  const getNowMsSoberano = () => {
+    try {
+      const now = Number(getServerNowMs?.());
+      if (Number.isFinite(now) && now > 0) return now;
+    } catch {}
+    return Date.now();
+  };
 
   // ms atual (usado para calcular secondsLeft)
-  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => getNowMsSoberano());
 
   useEffect(() => {
     let timeoutId = null;
     let intervalId = null;
 
     const start = () => {
-      // alinha no próximo "virar de segundo"
-      const now = Date.now();
-      const msToNextSecond = 1000 - (now % 1000);
+      const now = getNowMsSoberano();
+      const msToNextSecond = Math.max(1, 1000 - (Math.floor(now) % 1000));
 
       timeoutId = setTimeout(() => {
-        // bate exatamente na virada
-        setNowMs(Date.now());
+        setNowMs(getNowMsSoberano());
 
-        // e mantém alinhado
         intervalId = setInterval(() => {
-          setNowMs(Date.now());
+          setNowMs(getNowMsSoberano());
         }, 1000);
       }, msToNextSecond);
     };
@@ -40,7 +47,7 @@ const ActiveTradesPanel = () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, []);
+  }, [getServerNowMs]);
 
   // ✅ Se não houver trades ativos, NÃO renderiza nada
   if (!activeTrades || activeTrades.length === 0) {

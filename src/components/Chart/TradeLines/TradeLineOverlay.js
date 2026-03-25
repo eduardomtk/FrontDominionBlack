@@ -1,3 +1,4 @@
+import { useMarketStore } from "@/stores/market.store";
 import styles from "./tradeLines.module.css";
 
 const overlays = new Map();
@@ -6,6 +7,15 @@ function format(sec) {
   const m = String(Math.floor(sec / 60)).padStart(2, "0");
   const s = String(sec % 60).padStart(2, "0");
   return `${m}:${s}`;
+}
+
+function getNowMsSoberano() {
+  try {
+    const getServerNowMs = useMarketStore.getState?.()?.getServerNowMs;
+    const now = Number(getServerNowMs?.());
+    if (Number.isFinite(now) && now > 0) return now;
+  } catch {}
+  return Date.now();
 }
 
 function pickMsExpiresAt(trade) {
@@ -80,7 +90,7 @@ export function mount({ trade, container, series }) {
 
     // ✅ trava em 00:00, mas NÃO remove o label.
     // Quem remove é o TradeLinesManager quando o trade sai de activeTrades.
-    const remaining = Math.max(0, Math.ceil((expiresAtMs - Date.now()) / 1000));
+    const remaining = Math.max(0, Math.ceil((expiresAtMs - getNowMsSoberano()) / 1000));
     timeEl.textContent = format(remaining);
   };
 
@@ -96,7 +106,7 @@ export function mount({ trade, container, series }) {
     setTimeText(expiresAt);
 
     // alinha para o próximo boundary do segundo
-    const now = Date.now();
+    const now = getNowMsSoberano();
     const msToNextSecond = 1000 - (now % 1000);
 
     tickTimeout = setTimeout(() => {
