@@ -118,6 +118,30 @@ export default class TradeEngine {
     return true;
   }
 
+  restoreTrade(trade) {
+    if (!trade?.id) return false;
+    if (this.activeTrades.has(trade.id)) return true;
+
+    const expMs = this.toMs(trade.expiresAt ?? trade.expirationTime);
+    if (!Number.isFinite(expMs)) return false;
+
+    const openPrice = this._num(trade?.openPrice);
+    if (openPrice === null) return false;
+
+    const resolvedPayout = this._resolveTradePayout(trade);
+
+    this.activeTrades.set(trade.id, {
+      ...trade,
+      openPrice,
+      payout: resolvedPayout,
+      status: "OPEN",
+      expirationTime: expMs,
+      expiresAt: expMs,
+    });
+
+    return true;
+  }
+
   /**
    * Recebe candles (fechados + live)
    * candleEngine chama fn(candles, liveCandle)

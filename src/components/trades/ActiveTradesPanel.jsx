@@ -13,7 +13,7 @@ const ActiveTradesPanel = () => {
   const { activeTrades } = useTrade();
   const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
 
-  const getNowMsSoberano = () => {
+  const readNowMs = () => {
     try {
       const now = Number(getServerNowMs?.());
       if (Number.isFinite(now) && now > 0) return now;
@@ -22,21 +22,24 @@ const ActiveTradesPanel = () => {
   };
 
   // ms atual (usado para calcular secondsLeft)
-  const [nowMs, setNowMs] = useState(() => getNowMsSoberano());
+  const [nowMs, setNowMs] = useState(() => readNowMs());
 
   useEffect(() => {
     let timeoutId = null;
     let intervalId = null;
 
     const start = () => {
-      const now = getNowMsSoberano();
-      const msToNextSecond = Math.max(1, 1000 - (Math.floor(now) % 1000));
+      // alinha no próximo "virar de segundo"
+      const now = readNowMs();
+      const msToNextSecond = 1000 - (now % 1000);
 
       timeoutId = setTimeout(() => {
-        setNowMs(getNowMsSoberano());
+        // bate exatamente na virada
+        setNowMs(readNowMs());
 
+        // e mantém alinhado
         intervalId = setInterval(() => {
-          setNowMs(getNowMsSoberano());
+          setNowMs(readNowMs());
         }, 1000);
       }, msToNextSecond);
     };

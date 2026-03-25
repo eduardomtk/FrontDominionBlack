@@ -130,7 +130,7 @@ function mapTradeHistoryRow(row) {
   if (!row) return null;
 
   const ts = Number(row.timestamp);
-  const timestamp = Number.isFinite(ts) ? ts : getNowMsSoberano();
+  const timestamp = Number.isFinite(ts) ? ts : Date.now();
   const symbol = row.symbol ?? null;
 
   const tradeId = row.trade_id ? String(row.trade_id) : null;
@@ -212,6 +212,47 @@ function emptyHistoryByAccount() {
   return { REAL: [], DEMO: [] };
 }
 
+function openTradesStorageKey(uid, acc) {
+  const u = String(uid || "").trim();
+  const a = normalizeAccountType(acc, "DEMO");
+  return u ? `open-trades:${u}:${a}` : "";
+}
+
+function readOpenTradesBackup(uid, acc) {
+  if (typeof localStorage === "undefined") return [];
+  const key = openTradesStorageKey(uid, acc);
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(mapOpenTradeRow).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOpenTradesBackup(uid, acc, trades) {
+  if (typeof localStorage === "undefined") return;
+  const key = openTradesStorageKey(uid, acc);
+  if (!key) return;
+  try {
+    const arr = (Array.isArray(trades) ? trades : []).map((t) => ({
+      trade_id: String(t?.tradeId || t?.id || ""),
+      account_type: normalizeAccountType(t?.account, acc),
+      symbol: normalizePair(t?.symbol ?? t?.asset),
+      timeframe: normalizeTf(t?.timeframe || t?.expirationLabel),
+      direction: normalizeDirection(t?.direction),
+      amount: Number(t?.amount || 0),
+      payout: toNumberSafe(t?.payout),
+      open_price: toNumberSafe(t?.openPrice),
+      opened_at: Number.isFinite(toMs(t?.openedAt)) ? toMs(t?.openedAt) : null,
+      expires_at: Number.isFinite(toMs(t?.expiresAt)) ? toMs(t?.expiresAt) : Number.isFinite(toMs(t?.expirationTime)) ? toMs(t?.expirationTime) : null,
+    })).filter((t) => t.trade_id && Number.isFinite(Number(t.expires_at)));
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch {}
+}
+
 export function TradeProvider({ children }) {
   const [activeTrades, setActiveTrades] = useState([]);
   const [tradesByAccount, setTradesByAccount] = useState(() => emptyHistoryByAccount());
@@ -229,15 +270,6 @@ export function TradeProvider({ children }) {
   const { accountType, accountReady } = useAccount();
   const tournament = useTournament();
   const { user } = useTradingAuth();
-  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
-
-  const getNowMsSoberano = useCallback(() => {
-    try {
-      const now = Number(getServerNowMs?.());
-      if (Number.isFinite(now) && now > 0) return now;
-    } catch {}
-    return Date.now();
-  }, [getServerNowMs]);
 
   const userIdRef = useRef(null);
   useEffect(() => {
@@ -262,6 +294,14 @@ export function TradeProvider({ children }) {
   useEffect(() => {
     activeTradesRef.current = Array.isArray(activeTrades) ? activeTrades : [];
   }, [activeTrades]);
+
+  const getServerNowMs = useCallback(() => {
+    try {
+      const now = Number(useMarketStore.getState?.().getServerNowMs?.());
+      if (Number.isFinite(now) && now > 0) return now;
+    } catch {}
+    return Date.now();
+  }, []);
 
   const expireTimersRef = useRef(new Map());
 
@@ -304,7 +344,7 @@ export function TradeProvider({ children }) {
 
     const openedAt =
       Number.isFinite(toMs(openTradeNormalized?.openedAt)) ? toMs(openTradeNormalized?.openedAt)
-      : getNowMsSoberano();
+      : getServerNowMs();
 
     const payload = {
       user_id: user.id,
@@ -322,6 +362,11 @@ export function TradeProvider({ children }) {
       expires_at: expMs,
     };
 
+    writeOpenTradesBackup(user.id, acc, [
+      ...activeTradesRef.current.filter((t) => normalizeAccountType(t?.account, acc) === acc && String(t?.tradeId ?? t?.id ?? "") !== tradeId),
+      openTradeNormalized,
+    ]);
+
     const { error } = await supabase.from("open_trades").upsert(payload, {
       onConflict: "user_id,trade_id",
     });
@@ -333,6 +378,12 @@ export function TradeProvider({ children }) {
     if (!user?.id) return;
     const id = String(tradeId || "");
     if (!id) return;
+
+    writeOpenTradesBackup(
+      user.id,
+      accountType,
+      activeTradesRef.current.filter((t) => String(t?.tradeId ?? t?.id ?? "") !== id)
+    );
 
     const { error } = await supabase
       .from("open_trades")
@@ -380,9 +431,18 @@ export function TradeProvider({ children }) {
       }
 
       const rows = Array.isArray(data) ? data : [];
-      const mappedAll = rows.map(mapOpenTradeRow).filter(Boolean);
+      const dbMapped = rows.map(mapOpenTradeRow).filter(Boolean);
+      const backupMapped = readOpenTradesBackup(uid, acc);
 
-      const now = getNowMsSoberano();
+      const mergedMap = new Map();
+      for (const t of [...dbMapped, ...backupMapped]) {
+        const id = String(t?.tradeId ?? t?.id ?? "");
+        if (!id) continue;
+        mergedMap.set(id, t);
+      }
+      const mappedAll = Array.from(mergedMap.values()).sort((a, b) => Number(a?.expiresAt || 0) - Number(b?.expiresAt || 0));
+
+      const now = getServerNowMs();
       const stillOpen = [];
       const expiredIds = [];
 
@@ -402,6 +462,7 @@ export function TradeProvider({ children }) {
       }
 
       const mapped = stillOpen;
+      writeOpenTradesBackup(uid, acc, mapped);
 
       const pins = [];
       for (const t of mapped) {
@@ -417,10 +478,14 @@ export function TradeProvider({ children }) {
       openIdsRef.current = new Set(mapped.map((t) => String(t.id)));
       setActiveTrades(mapped);
 
+      for (const t of mapped) {
+        try { engineRef.current?.restoreTrade?.(t); } catch {}
+        scheduleExpiration(t);
+      }
     } catch (e) {
       console.warn("[OpenTrades] load exception:", e?.message || e);
     }
-  }, [user?.id, accountType, getNowMsSoberano]);
+  }, [user?.id, accountType, getServerNowMs]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -620,7 +685,7 @@ export function TradeProvider({ children }) {
       normalizedClosed.closedAt ??
       normalizedClosed.expiresAt ??
       normalizedClosed.expirationTime ??
-      Date.now();
+      getServerNowMs();
 
     const timestamp = Number.isFinite(toMs(tsRaw)) ? toMs(tsRaw) : Date.now();
 
@@ -710,7 +775,7 @@ export function TradeProvider({ children }) {
       (Number.isFinite(toMs(trade?.closedAt)) ? toMs(trade?.closedAt) : NaN) ||
       (Number.isFinite(toMs(trade?.expirationTime)) ? toMs(trade?.expirationTime) : NaN) ||
       (Number.isFinite(toMs(trade?.expiresAt)) ? toMs(trade?.expiresAt) : NaN) ||
-      Date.now();
+      getServerNowMs();
 
     const normalizedClosed = {
       ...trade,
@@ -757,8 +822,76 @@ export function TradeProvider({ children }) {
     }, 3500);
   }
 
-  // ✅ Fechamento soberano: somente a TradeEngine fecha no boundary do candle.
-  // Não usamos timeout local para evitar drift de relógio/browser e fechamento fora do candle.
+  const finalizeTradeById = useCallback((tradeId) => {
+    const id = String(tradeId || "");
+    if (!id) return;
+
+    const list = activeTradesRef.current;
+    const t = list.find((x) => String(x?.id ?? x?.tradeId ?? "") === id);
+    if (!t) return;
+
+    const pairKey = getPairKeyFromTrade(t);
+    const closePrice = pickClosePriceFromMarketStore(pairKey);
+
+    const openPrice = Number(t?.openPrice ?? t?.entryPrice ?? t?.price ?? t?.open);
+    const payout = Number(t?.payout ?? 0.85);
+    const amount = Number(t?.amount ?? 0);
+
+    const result = calcResult({
+      direction: t?.direction ?? t?.side ?? t?.type,
+      openPrice,
+      closePrice,
+    });
+
+    const profit = result === "WIN" ? amount * payout : 0;
+
+    registerClosedTrade({
+      ...t,
+      closedAt: getServerNowMs(),
+      closePrice: Number.isFinite(Number(closePrice)) ? Number(closePrice) : null,
+      result,
+      profit,
+    });
+  }, []);
+
+  function scheduleExpiration(trade) {
+    const id = String(trade?.id ?? trade?.tradeId ?? "");
+    if (!id) return;
+
+    const expMs =
+      Number.isFinite(toMs(trade?.expiresAt)) ? toMs(trade?.expiresAt)
+      : Number.isFinite(toMs(trade?.expirationTime)) ? toMs(trade?.expirationTime)
+      : NaN;
+
+    if (!Number.isFinite(expMs)) return;
+
+    const prev = expireTimersRef.current.get(id);
+    if (prev) {
+      try { clearTimeout(prev); } catch {}
+      expireTimersRef.current.delete(id);
+    }
+
+    const tick = () => {
+      const stillOpen = activeTradesRef.current.some((t) => String(t?.id ?? t?.tradeId ?? "") === id);
+      if (!stillOpen) {
+        expireTimersRef.current.delete(id);
+        return;
+      }
+
+      const remaining = expMs - getServerNowMs();
+      if (remaining <= 0) {
+        expireTimersRef.current.delete(id);
+        finalizeTradeById(id);
+        return;
+      }
+
+      const nextDelay = Math.max(80, Math.min(remaining, 1000));
+      const timeoutId = setTimeout(tick, nextDelay);
+      expireTimersRef.current.set(id, timeoutId);
+    };
+
+    tick();
+  }
 
   // ✅ CRÍTICO: openTrade async e só abre se o débito confirmar
   async function openTrade(trade) {
@@ -786,7 +919,7 @@ export function TradeProvider({ children }) {
       expiresAt: Number.isFinite(expMs) ? expMs : trade?.expiresAt,
       symbol: normalizePair(trade?.symbol ?? trade?.asset),
       timeframe: normalizeTf(trade?.timeframe || trade?.expirationLabel),
-      openedAt: getNowMsSoberano(),
+      openedAt: getServerNowMs(),
     };
 
     const tradeAccount = normalized.account;
@@ -819,13 +952,19 @@ export function TradeProvider({ children }) {
     }
 
     openIdsRef.current.add(id);
-    setActiveTrades((prev) => [...prev, normalized]);
+    setActiveTrades((prev) => {
+      const next = [...prev, normalized];
+      writeOpenTradesBackup(user.id, tradeAccount, next.filter((t) => normalizeAccountType(t?.account, tradeAccount) === tradeAccount));
+      return next;
+    });
 
     if (normalized.symbol) safePin(normalized.symbol, normalized.timeframe);
 
+    try { engineRef.current?.restoreTrade?.(normalized); } catch {}
     persistOpenTradeToSupabase(normalized);
 
     scheduleWalletSync();
+    scheduleExpiration(normalized);
     return true;
   }
 

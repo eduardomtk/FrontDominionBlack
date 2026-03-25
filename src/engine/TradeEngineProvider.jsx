@@ -56,35 +56,42 @@ export function TradeEngineProvider({ children }) {
 
   // ✅ Router: openTrade sempre usa engine do timeframe do TRADE (M1/M5/M15)
   useEffect(() => {
+    const ensureTradeEngine = (trade) => {
+      const acc = String(trade?.account || "").toUpperCase().trim();
+      const s = normalizePair(trade?.symbol);
+      const tf = normalizeTf(trade?.timeframe || trade?.expirationLabel);
+
+      if (!acc || !s || !tf) return null;
+
+      const key = `${acc}|${s}|${tf}`;
+      const pairKey = `${s}|${tf}`;
+
+      pinPairSafe(pairKey);
+
+      const candleEngine = ensureEngineByKey(pairKey) || getEngineByKey(pairKey);
+      if (!candleEngine) return null;
+
+      if (!enginesRef.current.has(key)) {
+        const engine = new TradeEngine({ symbol: s, timeframe: tf, candleEngine });
+
+        const unsubscribe = engine.subscribe((closedTrade) => {
+          registerClosedTradeRef.current?.(closedTrade);
+        });
+
+        enginesRef.current.set(key, { engine, unsubscribe, pairKey });
+      }
+
+      return enginesRef.current.get(key)?.engine || null;
+    };
+
     const router = {
       openTrade: (trade) => {
-        const acc = String(trade?.account || "").toUpperCase().trim();
-        const s = normalizePair(trade?.symbol);
-        const tf = normalizeTf(trade?.timeframe || trade?.expirationLabel);
-
-        if (!acc || !s || !tf) return false;
-
-        const key = `${acc}|${s}|${tf}`;
-        const pairKey = `${s}|${tf}`;
-
-        // ✅ mantém WS vivo para esse TF enquanto existir engine/trade
-        pinPairSafe(pairKey);
-
-        // ✅ garante candleEngine desse pairKey (cria sob demanda)
-        const candleEngine = ensureEngineByKey(pairKey) || getEngineByKey(pairKey);
-        if (!candleEngine) return false;
-
-        if (!enginesRef.current.has(key)) {
-          const engine = new TradeEngine({ symbol: s, timeframe: tf, candleEngine });
-
-          const unsubscribe = engine.subscribe((closedTrade) => {
-            registerClosedTradeRef.current?.(closedTrade);
-          });
-
-          enginesRef.current.set(key, { engine, unsubscribe, pairKey });
-        }
-
-        return enginesRef.current.get(key)?.engine?.openTrade?.(trade) === true;
+        const engine = ensureTradeEngine(trade);
+        return engine?.openTrade?.(trade) === true;
+      },
+      restoreTrade: (trade) => {
+        const engine = ensureTradeEngine(trade);
+        return engine?.restoreTrade?.(trade) === true;
       },
     };
 

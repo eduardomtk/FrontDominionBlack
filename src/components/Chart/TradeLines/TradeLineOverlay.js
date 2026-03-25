@@ -9,15 +9,6 @@ function format(sec) {
   return `${m}:${s}`;
 }
 
-function getNowMsSoberano() {
-  try {
-    const getServerNowMs = useMarketStore.getState?.()?.getServerNowMs;
-    const now = Number(getServerNowMs?.());
-    if (Number.isFinite(now) && now > 0) return now;
-  } catch {}
-  return Date.now();
-}
-
 function pickMsExpiresAt(trade) {
   const a = Number(trade?.expiresAt);
   if (Number.isFinite(a)) return a;
@@ -85,12 +76,20 @@ export function mount({ trade, container, series }) {
   let tickTimeout = null;
   let tickInterval = null;
 
+  const getNowMs = () => {
+    try {
+      const now = Number(useMarketStore.getState?.().getServerNowMs?.());
+      if (Number.isFinite(now) && now > 0) return now;
+    } catch {}
+    return Date.now();
+  };
+
   const setTimeText = (expiresAtMs) => {
     if (!timeEl) return;
 
     // ✅ trava em 00:00, mas NÃO remove o label.
     // Quem remove é o TradeLinesManager quando o trade sai de activeTrades.
-    const remaining = Math.max(0, Math.ceil((expiresAtMs - getNowMsSoberano()) / 1000));
+    const remaining = Math.max(0, Math.ceil((expiresAtMs - getNowMs()) / 1000));
     timeEl.textContent = format(remaining);
   };
 
@@ -106,7 +105,7 @@ export function mount({ trade, container, series }) {
     setTimeText(expiresAt);
 
     // alinha para o próximo boundary do segundo
-    const now = getNowMsSoberano();
+    const now = getNowMs();
     const msToNextSecond = 1000 - (now % 1000);
 
     tickTimeout = setTimeout(() => {
