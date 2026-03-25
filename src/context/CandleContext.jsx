@@ -55,8 +55,16 @@ export function CandleEngineProvider({ children }) {
   const activePairKeys = useMemo(() => {
     const set = new Set();
     if (currentPairKey) set.add(currentPairKey);
+
+    try {
+      const pinned = useMarketStore.getState?.().pinned || {};
+      for (const [key, count] of Object.entries(pinned)) {
+        if (Number(count) > 0 && key) set.add(String(key));
+      }
+    } catch {}
+
     return set;
-  }, [currentPairKey]);
+  }, [currentPairKey, engineVersion]);
 
   // ============================================================
   // ✅ Anti-rollback shield (por pairKey)
@@ -301,9 +309,27 @@ export function CandleEngineProvider({ children }) {
       applySnapshotToEngine(pairKey, pairData);
     };
 
+    const syncPinnedEngines = () => {
+      try {
+        const pinned = useMarketStore.getState?.().pinned || {};
+        let changed = false;
+
+        for (const [key, count] of Object.entries(pinned)) {
+          if (Number(count) <= 0 || !key) continue;
+          if (enginesRef.current.has(key)) continue;
+          const created = ensureEngine(key);
+          if (created) changed = true;
+        }
+
+        if (changed) setEngineVersion((v) => v + 1);
+      } catch {}
+    };
+
+    syncPinnedEngines();
     for (const k of enginesRef.current.keys()) applyKey(k);
 
     const unsub = useMarketStore.subscribe(() => {
+      syncPinnedEngines();
       for (const k of enginesRef.current.keys()) applyKey(k);
     });
 
@@ -312,7 +338,7 @@ export function CandleEngineProvider({ children }) {
         unsub?.();
       } catch {}
     };
-  }, [applySnapshotToEngine]);
+  }, [applySnapshotToEngine, ensureEngine]);
 
   const currentEngine = useMemo(() => {
     if (!currentKey) return null;
