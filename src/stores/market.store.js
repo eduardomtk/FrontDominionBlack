@@ -380,13 +380,19 @@ function clearPostHydrationResyncTimers(key) {
 
 function schedulePostHydrationResync() {}
 
-function prunePairsKeepRecent(pairs, focusKey, keepCount = 4) {
+function prunePairsKeepRecent(pairs, focusKey, keepCount = 4, pinned = {}) {
   const src = pairs && typeof pairs === "object" ? pairs : {};
+  const pinMap = pinned && typeof pinned === "object" ? pinned : {};
   const entries = Object.entries(src);
   if (entries.length <= keepCount) return src;
 
   const ordered = entries.sort((a, b) => Number(b?.[1]?._hotTouchedAt || 0) - Number(a?.[1]?._hotTouchedAt || 0));
   const keep = new Set(focusKey ? [focusKey] : []);
+
+  for (const [k] of ordered) {
+    if (Number(pinMap?.[k] || 0) > 0) keep.add(k);
+  }
+
   for (const [k] of ordered) {
     keep.add(k);
     if (keep.size >= keepCount) break;
@@ -822,7 +828,6 @@ export const useMarketStore = create((set, get) => {
         const incomingSig = makeHistorySig(snapshot.candles);
 
         set((state) => {
-          if (state.currentFocusKey && state.currentFocusKey !== key) return state;
           const current = state.pairs?.[key];
           if (!current) return state;
 
@@ -879,7 +884,6 @@ export const useMarketStore = create((set, get) => {
       }
 
       set((state) => {
-        if (state.currentFocusKey && state.currentFocusKey !== key) return state;
         const current = state.pairs[key];
         if (!current) return state;
 
@@ -1226,7 +1230,7 @@ export const useMarketStore = create((set, get) => {
 
         return {
           currentFocusKey: key,
-          pairs: prunePairsKeepRecent(nextPairs, key, 4),
+          pairs: prunePairsKeepRecent(nextPairs, key, 4, state.pinned),
         };
       });
 
