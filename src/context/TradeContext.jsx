@@ -19,7 +19,7 @@ const WALLET_SYNC_DEBOUNCE_MS = 400;
 const DEBUG_TRADE_HISTORY = true;
 
 // ✅ Edge function soberana (settlement + history)
-const SETTLE_FUNCTION_CANDIDATES = ["trade_settle", "trade-settle"];
+const SETTLE_FUNCTION_NAME = "trade-settle";
 
 function toMs(v) {
   const n = Number(v);
@@ -722,32 +722,32 @@ export function TradeProvider({ children }) {
       timestamp,
     };
 
-    for (const fnName of SETTLE_FUNCTION_CANDIDATES) {
-      try {
-        const { data, error } = await supabase.functions.invoke(fnName, { body: payload });
+    try {
+      const { data, error } = await supabase.functions.invoke(SETTLE_FUNCTION_NAME, {
+        body: payload,
+      });
 
-        if (error) {
-          console.warn(`[SETTLE][EDGE] ${fnName} invoke error:`, error);
-          continue;
-        }
-
-        if (data?.error) {
-          console.warn(`[SETTLE][EDGE] ${fnName} response error:`, data?.error, data);
-          continue;
-        }
-
-        if (data?.ok === true) {
-          console.log(`[SETTLE][EDGE] OK via ${fnName}`, data);
-          return true;
-        }
-
-        console.warn(`[SETTLE][EDGE] ${fnName} unexpected response:`, data);
-      } catch (e) {
-        console.warn(`[SETTLE][EDGE] ${fnName} exception:`, e?.message || e);
+      if (error) {
+        console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} invoke error:`, error);
+        return false;
       }
-    }
 
-    return false;
+      if (data?.error) {
+        console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} response error:`, data?.error, data);
+        return false;
+      }
+
+      if (data?.ok === true) {
+        console.log(`[SETTLE][EDGE] OK via ${SETTLE_FUNCTION_NAME}`, data);
+        return true;
+      }
+
+      console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} unexpected response:`, data);
+      return false;
+    } catch (e) {
+      console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} exception:`, e?.message || e);
+      return false;
+    }
   }
 
   function registerClosedTrade(trade) {
@@ -829,7 +829,7 @@ export function TradeProvider({ children }) {
       // sempre sincroniza com o soberano
       scheduleWalletSync();
       reload?.();
-      loadTradeHistory?.(accountType);
+      loadTradeHistory?.(closedAccount);
     });
 
     setLastResult(normalizedClosed);
