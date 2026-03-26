@@ -27,6 +27,12 @@ function toMs(v) {
   return n < 1e11 ? n * 1000 : n;
 }
 
+function toIntMs(v, fallback = NaN) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.floor(n);
+}
+
 function normalizeAccountType(v, fallback) {
   const t = String(v || fallback || "").toUpperCase();
   return t === "REAL" ? "REAL" : "DEMO";
@@ -339,16 +345,22 @@ export function TradeProvider({ children }) {
 
     const acc = normalizeAccountType(openTradeNormalized?.account, accountType);
 
-    const expMs =
+    const expMsRaw =
       Number.isFinite(toMs(openTradeNormalized?.expiresAt)) ? toMs(openTradeNormalized?.expiresAt)
       : Number.isFinite(toMs(openTradeNormalized?.expirationTime)) ? toMs(openTradeNormalized?.expirationTime)
       : NaN;
 
-    if (!Number.isFinite(expMs)) return;
+    if (!Number.isFinite(expMsRaw)) return;
 
-    const openedAt =
+    const openedAtRaw =
       Number.isFinite(toMs(openTradeNormalized?.openedAt)) ? toMs(openTradeNormalized?.openedAt)
       : getServerNowMs();
+
+    const expMs = toIntMs(expMsRaw);
+    const openedAt = toIntMs(openedAtRaw);
+
+    if (!Number.isFinite(expMs) || expMs <= 0) return;
+    if (!Number.isFinite(openedAt) || openedAt <= 0) return;
 
     const payload = {
       user_id: user.id,
@@ -368,7 +380,12 @@ export function TradeProvider({ children }) {
 
     writeOpenTradesBackup(user.id, acc, [
       ...activeTradesRef.current.filter((t) => normalizeAccountType(t?.account, acc) === acc && String(t?.tradeId ?? t?.id ?? "") !== tradeId),
-      openTradeNormalized,
+      {
+        ...openTradeNormalized,
+        openedAt,
+        expiresAt: expMs,
+        expirationTime: expMs,
+      },
     ]);
 
     const { error } = await supabase.from("open_trades").upsert(payload, {
