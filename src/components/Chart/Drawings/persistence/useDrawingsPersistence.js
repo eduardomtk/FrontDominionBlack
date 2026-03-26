@@ -1,9 +1,11 @@
+```js
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/services/supabaseClient";
 
 function normalizePair(pair) {
   return String(pair || "").replace("/", "").toUpperCase().trim();
 }
+
 function normalizeTf(tf) {
   const s = String(tf || "").trim().toUpperCase();
   if (s === "M1" || s === "M5" || s === "M15" || s === "M30" || s === "H1") return s;
@@ -87,14 +89,16 @@ function sanitizePayloadForPairScope(payload) {
     });
 }
 
-export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiRef, chartInstanceKey = "" }) {
+export default function useDrawingsPersistence({
+  symbol,
+  timeframe,
+  drawingsApiRef,
+  chartInstanceKey = "",
+}) {
   const sym = useMemo(() => normalizePair(symbol), [symbol]);
   const tf = useMemo(() => normalizeTf(timeframe), [timeframe]);
 
-  // Local continua pair-scoped
   const PAIR_SCOPE_TF = "__PAIR__";
-
-  // Remoto soberano sempre em H1
   const REMOTE_SCOPE_TF = "H1";
 
   const [userId, setUserId] = useState(null);
@@ -215,6 +219,57 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     [drawingsApiRef]
   );
 
+  const persistRemotePayload = useCallback(
+    async (payloadArr) => {
+      if (!userId || !sym) return;
+
+      try {
+        const baseRow = {
+          user_id: userId,
+          pair: sym,
+          timeframe: REMOTE_SCOPE_TF,
+          payload: Array.isArray(payloadArr) ? payloadArr : [],
+        };
+
+        const existingResp = await supabase
+          .from("user_drawings")
+          .select("user_id")
+          .eq("user_id", userId)
+          .eq("pair", sym)
+          .eq("timeframe", REMOTE_SCOPE_TF)
+          .maybeSingle();
+
+        if (existingResp.error) {
+          console.warn("[Drawings] existing row lookup error:", existingResp.error.message);
+          return;
+        }
+
+        if (existingResp.data) {
+          const { error: updateError } = await supabase
+            .from("user_drawings")
+            .update({ payload: baseRow.payload })
+            .eq("user_id", userId)
+            .eq("pair", sym)
+            .eq("timeframe", REMOTE_SCOPE_TF);
+
+          if (updateError) {
+            console.warn("[Drawings] update error:", updateError.message);
+          }
+          return;
+        }
+
+        const { error: insertError } = await supabase.from("user_drawings").insert(baseRow);
+
+        if (insertError) {
+          console.warn("[Drawings] insert error:", insertError.message);
+        }
+      } catch (e) {
+        console.warn("[Drawings] persist exception:", e?.message || e);
+      }
+    },
+    [userId, sym]
+  );
+
   const load = useCallback(async () => {
     const api = drawingsApiRef?.current;
     if (!authResolved || !api?.importJSON || !sym || !tf || !key) return;
@@ -308,18 +363,7 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
       }
 
       if (chosen?.timeframe && chosen.timeframe !== REMOTE_SCOPE_TF) {
-        try {
-          await supabase.from("user_drawings").upsert(
-            {
-              user_id: userId,
-              pair: sym,
-              timeframe: REMOTE_SCOPE_TF,
-              payload: sanitized,
-              version: 2,
-            },
-            { onConflict: "user_id,pair,timeframe" }
-          );
-        } catch {}
+        await persistRemotePayload(sanitized);
       }
     } catch {
     } finally {
@@ -333,6 +377,7 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     endProgrammaticHydrationSoon,
     key,
     legacyKeys,
+    persistRemotePayload,
     sym,
     tf,
     userId,
@@ -355,19 +400,8 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
 
     if (!userId) return;
 
-    try {
-      await supabase.from("user_drawings").upsert(
-        {
-          user_id: userId,
-          pair: sym,
-          timeframe: REMOTE_SCOPE_TF,
-          payload: payloadArr,
-          version: 2,
-        },
-        { onConflict: "user_id,pair,timeframe" }
-      );
-    } catch {}
-  }, [authResolved, drawingsApiRef, key, sym, userId]);
+    await persistRemotePayload(payloadArr);
+  }, [authResolved, drawingsApiRef, key, persistRemotePayload, sym, userId]);
 
   const scheduleSave = useCallback(() => {
     if (suppressPersistenceRef.current) return;
@@ -429,3 +463,4 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
 
   return { onDrawingsChange, onDrawingsCommit, load, saveNow };
 }
+```
