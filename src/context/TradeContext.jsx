@@ -212,6 +212,10 @@ function emptyHistoryByAccount() {
   return { REAL: [], DEMO: [] };
 }
 
+function emptyPinsByAccount() {
+  return { REAL: [], DEMO: [] };
+}
+
 function openTradesStorageKey(uid, acc) {
   const u = String(uid || "").trim();
   const a = normalizeAccountType(acc, "DEMO");
@@ -395,24 +399,26 @@ export function TradeProvider({ children }) {
   }
 
   const openLoadSeqRef = useRef(0);
-  const restoredPinsRef = useRef([]);
+  const restoredPinsRef = useRef(emptyPinsByAccount());
 
   const loadOpenTrades = useCallback(async (typeOverride) => {
     const uid = user?.id;
+    const acc = normalizeAccountType(typeOverride, accountType);
 
     try {
-      const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
+      const prevPins = Array.isArray(restoredPinsRef.current?.[acc]) ? restoredPinsRef.current[acc] : [];
       for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
     } catch {}
-    restoredPinsRef.current = [];
+    restoredPinsRef.current = {
+      ...(restoredPinsRef.current && typeof restoredPinsRef.current === "object" ? restoredPinsRef.current : emptyPinsByAccount()),
+      [acc]: [],
+    };
 
     if (!uid) {
-      setActiveTrades([]);
-      openIdsRef.current = new Set();
+      setActiveTrades((prev) => (Array.isArray(prev) ? prev.filter((t) => normalizeAccountType(t?.account, acc) !== acc) : []));
+      openIdsRef.current = new Set((activeTradesRef.current || []).filter((t) => normalizeAccountType(t?.account, acc) !== acc).map((t) => String(t?.id ?? t?.tradeId ?? "")).filter(Boolean));
       return;
     }
-
-    const acc = normalizeAccountType(typeOverride, accountType);
     const seq = ++openLoadSeqRef.current;
 
     try {
@@ -473,10 +479,21 @@ export function TradeProvider({ children }) {
           pins.push({ symbol, timeframe: tf });
         }
       }
-      restoredPinsRef.current = pins;
+      restoredPinsRef.current = {
+        ...(restoredPinsRef.current && typeof restoredPinsRef.current === "object" ? restoredPinsRef.current : emptyPinsByAccount()),
+        [acc]: pins,
+      };
 
-      openIdsRef.current = new Set(mapped.map((t) => String(t.id)));
-      setActiveTrades(mapped);
+      setActiveTrades((prev) => {
+        const otherAccounts = (Array.isArray(prev) ? prev : []).filter(
+          (t) => normalizeAccountType(t?.account, acc) !== acc
+        );
+        const merged = [...otherAccounts, ...mapped].sort(
+          (a, b) => Number(a?.expiresAt || a?.expirationTime || 0) - Number(b?.expiresAt || b?.expirationTime || 0)
+        );
+        openIdsRef.current = new Set(merged.map((t) => String(t?.id ?? t?.tradeId ?? "")).filter(Boolean));
+        return merged;
+      });
 
       for (const t of mapped) {
         try { engineRef.current?.restoreTrade?.(t); } catch {}
@@ -490,10 +507,12 @@ export function TradeProvider({ children }) {
   useEffect(() => {
     if (!user?.id) {
       try {
-        const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
-        for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
+        const allPins = restoredPinsRef.current && typeof restoredPinsRef.current === "object"
+          ? Object.values(restoredPinsRef.current).flat()
+          : [];
+        for (const p of allPins) safeUnpin(p.symbol, p.timeframe);
       } catch {}
-      restoredPinsRef.current = [];
+      restoredPinsRef.current = emptyPinsByAccount();
 
       setActiveTrades([]);
       openIdsRef.current = new Set();
@@ -985,10 +1004,12 @@ export function TradeProvider({ children }) {
         }
 
         try {
-          const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
-          for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
+          const allPins = restoredPinsRef.current && typeof restoredPinsRef.current === "object"
+            ? Object.values(restoredPinsRef.current).flat()
+            : [];
+          for (const p of allPins) safeUnpin(p.symbol, p.timeframe);
         } catch {}
-        restoredPinsRef.current = [];
+        restoredPinsRef.current = emptyPinsByAccount();
       } catch {}
     };
   }, []);

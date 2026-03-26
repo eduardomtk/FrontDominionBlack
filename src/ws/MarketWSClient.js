@@ -250,9 +250,6 @@ export default class MarketWSClient {
 
         const currentExclusiveKey = String(this.currentExclusiveKey || "");
         const currentExclusive = currentExclusiveKey ? this._splitKey(currentExclusiveKey) : null;
-        if (currentExclusive && symbol && symbol !== currentExclusive.symbol) {
-          return;
-        }
 
         if (msg.type === "market_snapshot") {
           if (!symbol) return;
@@ -304,10 +301,6 @@ export default class MarketWSClient {
           if (!candles.length) return;
 
           let tfs = tfFromMsg ? [tfFromMsg] : this._getActiveTFsForSymbol(symbol);
-          if (currentExclusive && currentExclusive.symbol === symbol) {
-            tfs = tfs.filter((tf) => tf === currentExclusive.timeframe);
-            if (!tfs.length && !tfFromMsg) tfs = [currentExclusive.timeframe];
-          }
 
           if (!tfs.length) {
             const tfFallback = this._inferTimeframeForSymbol(symbol);
@@ -377,10 +370,6 @@ export default class MarketWSClient {
 
           const payload = msg.payload || msg;
           let tfs = tfFromMsg ? [tfFromMsg] : this._getActiveTFsForSymbol(symbol);
-          if (currentExclusive && currentExclusive.symbol === symbol) {
-            tfs = tfs.filter((tf) => tf === currentExclusive.timeframe);
-            if (!tfs.length && !tfFromMsg) tfs = [currentExclusive.timeframe];
-          }
 
           if (!tfs.length) {
             const tfFallback = this._inferTimeframeForSymbol(symbol);
@@ -399,10 +388,6 @@ export default class MarketWSClient {
 
           const payload = msg.payload;
           let tfs = tfFromMsg ? [tfFromMsg] : this._getActiveTFsForSymbol(symbol);
-          if (currentExclusive && currentExclusive.symbol === symbol) {
-            tfs = tfs.filter((tf) => tf === currentExclusive.timeframe);
-            if (!tfs.length && !tfFromMsg) tfs = [currentExclusive.timeframe];
-          }
 
           if (!tfs.length) {
             const tfFallback = this._inferTimeframeForSymbol(symbol);
@@ -427,10 +412,6 @@ export default class MarketWSClient {
 
           const payload = msg.payload;
           let tfs = tfFromMsg ? [tfFromMsg] : this._getActiveTFsForSymbol(symbol);
-          if (currentExclusive && currentExclusive.symbol === symbol) {
-            tfs = tfs.filter((tf) => tf === currentExclusive.timeframe);
-            if (!tfs.length && !tfFromMsg) tfs = [currentExclusive.timeframe];
-          }
 
           if (!tfs.length) {
             const tfFallback = this._inferTimeframeForSymbol(symbol);
@@ -503,21 +484,6 @@ export default class MarketWSClient {
 
   _syncExclusiveState(nextKey) {
     const keep = String(nextKey || "");
-
-    for (const key of Array.from(this.pendingSubscriptions)) {
-      if (key === keep) continue;
-      const { symbol, timeframe } = this._splitKey(key);
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        this._send({ type: "deactivate", symbol, timeframe });
-      }
-      this.pendingSubscriptions.delete(key);
-      delete this._subSeq[key];
-      delete this._pairSessionId[key];
-      delete this._bootReadyByKey[key];
-      delete this._reaffirmAt[key];
-      this._clearTimersForKey(key);
-    }
-
     this.currentExclusiveKey = keep;
   }
 
@@ -553,6 +519,14 @@ export default class MarketWSClient {
       this._send({ type: "activate", symbol: s, timeframe: tf, resnapshot });
       if (requestLiveSeed) this._forceLiveSeed(s, tf);
     }
+  }
+
+  isSubscribed(symbol, timeframe = "M1") {
+    const s = (symbol || "").toUpperCase().trim();
+    const tf = String(timeframe || "M1").toUpperCase().trim() || "M1";
+    const key = this._makeKey(s, tf);
+    if (!key) return false;
+    return this.pendingSubscriptions.has(key);
   }
 
   subscribe(symbol, timeframe = "M1", options = undefined) {

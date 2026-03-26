@@ -343,6 +343,22 @@ function wsOpenPair(wsManager, symbol, timeframe, options = undefined) {
   wsManager.openPair(symbol, timeframe, options);
 }
 
+function wsPinPair(wsManager, symbol, timeframe, options = undefined) {
+  if (typeof wsManager?.pinPair === "function") {
+    wsManager.pinPair(symbol, timeframe, options);
+    return;
+  }
+  if (typeof wsManager?.openPair !== "function") return;
+  wsManager.openPair(symbol, timeframe, options);
+}
+
+function wsUnpinPair(wsManager, symbol, timeframe) {
+  if (typeof wsManager?.unpinPair === "function") {
+    wsManager.unpinPair(symbol, timeframe);
+    return;
+  }
+}
+
 function wsClosePair(wsManager, symbol, timeframe) {
   if (typeof wsManager?.closePair !== "function") return;
   wsManager.closePair(symbol, timeframe);
@@ -694,7 +710,7 @@ export const useMarketStore = create((set, get) => {
         }));
       }
 
-      wsOpenPair(wsManager, symbol, tf);
+      wsPinPair(wsManager, symbol, tf);
     },
 
     unpinPair: ({ pair, timeframe = "M1" }) => {
@@ -717,6 +733,7 @@ export const useMarketStore = create((set, get) => {
       });
 
       if (next <= 0 && get().pairs?.[key]) {
+        wsUnpinPair(wsManager, symbol, tf);
         scheduleOrphanClose({ key, symbol, timeframe: tf, set, get, wsManager });
       }
     },
