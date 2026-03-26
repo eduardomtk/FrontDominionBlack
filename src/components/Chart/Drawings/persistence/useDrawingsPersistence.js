@@ -232,22 +232,53 @@ export default function useDrawingsPersistence({
 
       const cleanPayload = Array.isArray(payloadArr) ? payloadArr : [];
 
-      const { error } = await supabase.from("user_drawings").upsert(
-        {
-          user_id: userId,
-          pair: sym,
-          timeframe: null,
-          scope: REMOTE_SCOPE,
-          payload: cleanPayload,
-          version: 2,
-        },
-        {
-          onConflict: "user_id,pair,scope",
-        }
-      );
+      try {
+        const { data: existing, error: selectError } = await supabase
+          .from("user_drawings")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("pair", sym)
+          .eq("scope", REMOTE_SCOPE)
+          .is("timeframe", null)
+          .maybeSingle();
 
-      if (error) {
-        console.warn("[Drawings] upsert error:", error.message, error);
+        if (selectError) {
+          console.warn("[Drawings] select existing error:", selectError.message, selectError);
+          return;
+        }
+
+        if (existing?.id) {
+          const { error: updateError } = await supabase
+            .from("user_drawings")
+            .update({
+              payload: cleanPayload,
+              version: 2,
+            })
+            .eq("id", existing.id);
+
+          if (updateError) {
+            console.warn("[Drawings] update error:", updateError.message, updateError);
+          }
+
+          return;
+        }
+
+        const { error: insertError } = await supabase
+          .from("user_drawings")
+          .insert({
+            user_id: userId,
+            pair: sym,
+            timeframe: null,
+            scope: REMOTE_SCOPE,
+            payload: cleanPayload,
+            version: 2,
+          });
+
+        if (insertError) {
+          console.warn("[Drawings] insert error:", insertError.message, insertError);
+        }
+      } catch (e) {
+        console.warn("[Drawings] persist exception:", e?.message || e);
       }
     },
     [userId, sym]
