@@ -30,7 +30,6 @@ function stripLogicalFromPoint(pt) {
   return out;
 }
 
-
 function parseCacheEntry(raw) {
   const parsed = safeJsonParse(raw);
   if (Array.isArray(parsed)) {
@@ -91,7 +90,12 @@ function sanitizePayloadForPairScope(payload) {
 export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiRef, chartInstanceKey = "" }) {
   const sym = useMemo(() => normalizePair(symbol), [symbol]);
   const tf = useMemo(() => normalizeTf(timeframe), [timeframe]);
+
+  // Local continua pair-scoped
   const PAIR_SCOPE_TF = "__PAIR__";
+
+  // Remoto soberano sempre em H1
+  const REMOTE_SCOPE_TF = "H1";
 
   const [userId, setUserId] = useState(null);
   const [authResolved, setAuthResolved] = useState(false);
@@ -115,7 +119,6 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     return Array.from(new Set(all.filter(Boolean))).map((item) => `drawings:v1:${uid}:${sym}:${item}`);
   }, [authResolved, userId, sym, tf]);
 
-  // ✅ pega user (sem depender de contexts)
   useEffect(() => {
     let alive = true;
 
@@ -177,9 +180,11 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     }, Math.max(0, Number(delay) || 0));
   }, [stopSuppressReleaseTimer]);
 
-  useEffect(() => () => {
-    stopDebounce();
-    stopSuppressReleaseTimer();
+  useEffect(() => {
+    return () => {
+      stopDebounce();
+      stopSuppressReleaseTimer();
+    };
   }, [stopDebounce, stopSuppressReleaseTimer]);
 
   const clearEngineInstant = useCallback(() => {
@@ -187,7 +192,6 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     if (!api) return;
 
     try {
-      // mais forte que clearAll: força estado consistente
       api.importJSON?.([]);
       api.invalidate?.();
     } catch {
@@ -211,7 +215,6 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     [drawingsApiRef]
   );
 
-  // ✅ load (local instantâneo + supabase em paralelo) com anti-race
   const load = useCallback(async () => {
     const api = drawingsApiRef?.current;
     if (!authResolved || !api?.importJSON || !sym || !tf || !key) return;
@@ -219,8 +222,8 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     beginProgrammaticHydration();
     const seq = ++loadSeqRef.current;
 
-    // 1) local primeiro (instantâneo)
     let localSavedAt = 0;
+
     try {
       if (userId) {
         const anonKey = `drawings:v2:anon:${sym}:${PAIR_SCOPE_TF}`;
@@ -235,6 +238,7 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
 
       const keysToTry = [key, ...legacyKeys];
       const localEntry = readBestLocalCache(keysToTry);
+
       if (localEntry?.payload) {
         if (seq !== loadSeqRef.current) return;
         applyPayloadToEngine(sanitizePayloadForPairScope(localEntry.payload));
@@ -243,7 +247,6 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
       localSavedAt = Number(localEntry?.savedAt || 0) || 0;
     } catch {}
 
-    // 2) supabase (se logado)
     if (!userId) {
       endProgrammaticHydrationSoon();
       return;
@@ -251,15 +254,17 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
 
     try {
       let pairScoped = null;
+
       const pairScopedResp = await supabase
         .from("user_drawings")
         .select("payload, updated_at")
         .eq("user_id", userId)
         .eq("pair", sym)
-        .eq("timeframe", PAIR_SCOPE_TF)
+        .eq("timeframe", REMOTE_SCOPE_TF)
         .maybeSingle();
 
       if (seq !== loadSeqRef.current) return;
+
       if (!pairScopedResp.error && pairScopedResp.data?.payload) {
         pairScoped = pairScopedResp.data;
       }
@@ -277,10 +282,13 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
           .limit(5);
 
         if (seq !== loadSeqRef.current) return;
+
         if (!legacyResp.error && Array.isArray(legacyResp.data) && legacyResp.data.length) {
-          chosen = legacyResp.data.find((row) => row?.timeframe === tf && Array.isArray(row?.payload))
-            || legacyResp.data.find((row) => Array.isArray(row?.payload))
-            || null;
+          chosen =
+            legacyResp.data.find((row) => row?.timeframe === REMOTE_SCOPE_TF && Array.isArray(row?.payload)) ||
+            legacyResp.data.find((row) => row?.timeframe === tf && Array.isArray(row?.payload)) ||
+            legacyResp.data.find((row) => Array.isArray(row?.payload)) ||
+            null;
         }
       }
 
@@ -299,13 +307,13 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
         } catch {}
       }
 
-      if (chosen?.timeframe && chosen.timeframe !== PAIR_SCOPE_TF) {
+      if (chosen?.timeframe && chosen.timeframe !== REMOTE_SCOPE_TF) {
         try {
           await supabase.from("user_drawings").upsert(
             {
               user_id: userId,
               pair: sym,
-              timeframe: PAIR_SCOPE_TF,
+              timeframe: REMOTE_SCOPE_TF,
               payload: sanitized,
               version: 2,
             },
@@ -313,30 +321,38 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
           );
         } catch {}
       }
-    } catch {}
-    finally {
+    } catch {
+    } finally {
       endProgrammaticHydrationSoon();
     }
-  }, [applyPayloadToEngine, authResolved, beginProgrammaticHydration, drawingsApiRef, endProgrammaticHydrationSoon, key, legacyKeys, sym, tf, userId]);
+  }, [
+    applyPayloadToEngine,
+    authResolved,
+    beginProgrammaticHydration,
+    drawingsApiRef,
+    endProgrammaticHydrationSoon,
+    key,
+    legacyKeys,
+    sym,
+    tf,
+    userId,
+  ]);
 
-  // ✅ salva (local + supabase upsert)
   const saveNow = useCallback(async () => {
     const api = drawingsApiRef?.current;
     if (!authResolved || !api?.exportJSON || !sym || !key) return;
 
     let payloadArr = [];
     try {
-      const exported = api.exportJSON(); // string JSON
+      const exported = api.exportJSON();
       const parsed = safeJsonParse(exported);
       if (Array.isArray(parsed)) payloadArr = sanitizePayloadForPairScope(parsed);
     } catch {}
 
-    // local cache sempre
     try {
       writeCacheEntry(key, payloadArr);
     } catch {}
 
-    // supabase apenas se logado
     if (!userId) return;
 
     try {
@@ -344,7 +360,7 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
         {
           user_id: userId,
           pair: sym,
-          timeframe: PAIR_SCOPE_TF,
+          timeframe: REMOTE_SCOPE_TF,
           payload: payloadArr,
           version: 2,
         },
@@ -355,6 +371,7 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
 
   const scheduleSave = useCallback(() => {
     if (suppressPersistenceRef.current) return;
+
     stopDebounce();
     saveTimerRef.current = window.setTimeout(() => {
       saveTimerRef.current = 0;
@@ -362,19 +379,16 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     }, 650);
   }, [saveNow, stopDebounce]);
 
-  // ✅ plugar no DrawingOverlay.onChange
   const onDrawingsChange = useCallback(() => {
     scheduleSave();
   }, [scheduleSave]);
 
-  // ✅ plugar no DrawingOverlay.onCommit (salva imediato)
   const onDrawingsCommit = useCallback(() => {
     if (suppressPersistenceRef.current) return;
     stopDebounce();
     saveNow();
   }, [saveNow, stopDebounce]);
 
-  // ✅ quando muda par/TF/user: some IMEDIATO e depois carrega certo (sem race)
   useEffect(() => {
     if (!authResolved || !key) return;
 
@@ -382,14 +396,11 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     if (lastLoadTargetRef.current === loadTarget) return;
     lastLoadTargetRef.current = loadTarget;
 
-    // mata race antiga
     loadSeqRef.current++;
     beginProgrammaticHydration();
 
-    // ✅ some em milissegundos (sem vazar pro outro par)
     clearEngineInstant();
 
-    // espera apiRef estar pronto (overlay monta depois)
     const t0 = performance.now();
     const tick = () => {
       const api = drawingsApiRef?.current;
@@ -405,7 +416,16 @@ export default function useDrawingsPersistence({ symbol, timeframe, drawingsApiR
     };
 
     requestAnimationFrame(tick);
-  }, [authResolved, beginProgrammaticHydration, key, load, drawingsApiRef, clearEngineInstant, chartInstanceKey, endProgrammaticHydrationSoon]);
+  }, [
+    authResolved,
+    beginProgrammaticHydration,
+    key,
+    load,
+    drawingsApiRef,
+    clearEngineInstant,
+    chartInstanceKey,
+    endProgrammaticHydrationSoon,
+  ]);
 
   return { onDrawingsChange, onDrawingsCommit, load, saveNow };
 }
