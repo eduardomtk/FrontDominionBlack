@@ -90,13 +90,14 @@
 .balanceContainer {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   position: relative;
   cursor: pointer;
   min-width: 0;
   gap: 3px;
-  padding-top: 1px;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .balanceRealMode {}
@@ -106,66 +107,72 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 16px;
-  padding: 2px 8px;
+  min-height: 18px;
+  padding: 2px 10px 2px;
   border-radius: 999px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.95px;
   text-transform: uppercase;
   line-height: 1;
-  color: #8fffd0;
-  background: linear-gradient(180deg, rgba(0, 192, 118, 0.22) 0%, rgba(0, 192, 118, 0.12) 100%);
-  border: 1px solid rgba(0, 192, 118, 0.42);
+  color: #effff7;
+  background: linear-gradient(180deg, #0f4b34 0%, #0a3726 100%);
+  border: 1px solid rgba(31, 226, 134, 0.95);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 12px rgba(0, 192, 118, 0.18);
-  text-shadow: 0 0 8px rgba(0, 192, 118, 0.28) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(0, 0, 0, 0.25);
+  text-shadow: none !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .badgeDemo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 16px;
-  padding: 2px 8px;
+  min-height: 18px;
+  padding: 2px 10px 2px;
   border-radius: 999px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.95px;
   text-transform: uppercase;
   line-height: 1;
-  color: #ffd08a;
-  background: linear-gradient(180deg, rgba(255, 152, 0, 0.22) 0%, rgba(255, 152, 0, 0.12) 100%);
-  border: 1px solid rgba(255, 152, 0, 0.42);
+  color: #fff4e5;
+  background: linear-gradient(180deg, #5a3300 0%, #402400 100%);
+  border: 1px solid rgba(255, 169, 58, 0.95);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 0 12px rgba(255, 152, 0, 0.16);
-  text-shadow: 0 0 8px rgba(255, 152, 0, 0.28) !important;
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 0 rgba(0, 0, 0, 0.25);
+  text-shadow: none !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .balanceValue {
-  color: #00c076 !important;
+  color: #11e07f !important;
   font-weight: 900 !important;
   font-size: 18px !important;
   line-height: 1;
-  text-shadow:
-    0 0 12px rgba(0, 192, 118, 0.45),
-    0 0 24px rgba(0, 192, 118, 0.15);
+  letter-spacing: 0.15px;
+  text-shadow: none !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .balanceDemo {
-  color: #ff9800 !important;
+  color: #ffb347 !important;
   font-weight: 900 !important;
   font-size: 18px !important;
   line-height: 1;
-  text-shadow:
-    0 0 12px rgba(255, 152, 0, 0.45),
-    0 0 24px rgba(255, 152, 0, 0.14);
+  letter-spacing: 0.15px;
+  text-shadow: none !important;
   white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* BOTÕES DE AÇÃO */
@@ -724,22 +731,26 @@
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceContainer {
-  min-width: 92px;
+  min-width: 96px;
   gap: 2px;
+  align-items: flex-end;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeReal,
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeDemo {
-  font-size: 7px;
-  min-height: 14px;
-  padding: 1px 6px;
+  min-height: 16px;
+  font-size: 8px;
+  font-weight: 900;
+  padding: 2px 7px 2px;
   border-radius: 999px;
-  letter-spacing: 0.55px;
+  letter-spacing: 0.8px;
+  text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceValue,
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceDemo {
   font-size: 14px !important;
+  text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .actionButtons {
@@ -774,7 +785,7 @@
 }
 
 /* ==================================================
-   ✅ MOBILE PORTRAIT — IDÊNTICO AO PADRÃO PEDIDO
+   ✅ MOBILE PORTRAIT
    ================================================== */
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .header {
@@ -850,7 +861,7 @@
   align-items: center;
   min-width: 0;
   width: 100%;
-  max-width: 168px;
+  max-width: 176px;
   height: 40px;
   padding: 4px 22px 4px 10px;
   border-radius: 8px;
@@ -863,6 +874,7 @@
   overflow: hidden;
   text-align: center;
   gap: 1px;
+  transform: none;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceContainer::after {
@@ -898,20 +910,19 @@
   line-height: 1;
   font-size: 8px;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   text-transform: uppercase;
   width: 100%;
   text-align: center;
+  text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeReal {
-  color: #29e398 !important;
-  text-shadow: none !important;
+  color: #2ce69b !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeDemo {
-  color: #ffb54d !important;
-  text-shadow: none !important;
+  color: #ffb650 !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceValue,
@@ -925,16 +936,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceValue {
-  color: #00c076 !important;
-  text-shadow: none !important;
+  color: #11e07f !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceDemo {
-  color: #ff9800 !important;
-  text-shadow: none !important;
+  color: #ffb347 !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .actionButtons {
@@ -1053,7 +1063,7 @@
     align-items: center;
     min-width: 0;
     width: 100%;
-    max-width: 168px;
+    max-width: 176px;
     height: 40px;
     padding: 4px 22px 4px 10px;
     border-radius: 8px;
@@ -1066,6 +1076,7 @@
     overflow: hidden;
     text-align: center;
     gap: 1px;
+    transform: none;
   }
 
   .balanceContainer::after {
@@ -1101,20 +1112,19 @@
     line-height: 1;
     font-size: 8px;
     font-weight: 900;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.7px;
     text-transform: uppercase;
     width: 100%;
     text-align: center;
+    text-shadow: none !important;
   }
 
   .badgeReal {
-    color: #29e398 !important;
-    text-shadow: none !important;
+    color: #2ce69b !important;
   }
 
   .badgeDemo {
-    color: #ffb54d !important;
-    text-shadow: none !important;
+    color: #ffb650 !important;
   }
 
   .balanceValue,
@@ -1128,16 +1138,15 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     text-align: center;
+    text-shadow: none !important;
   }
 
   .balanceValue {
-    color: #00c076 !important;
-    text-shadow: none !important;
+    color: #11e07f !important;
   }
 
   .balanceDemo {
-    color: #ff9800 !important;
-    text-shadow: none !important;
+    color: #ffb347 !important;
   }
 
   .actionButtons {
@@ -1233,22 +1242,25 @@
   }
 
   .balanceContainer {
-    min-width: 92px;
+    min-width: 96px;
     gap: 2px;
+    align-items: flex-end;
   }
 
   .badgeReal,
   .badgeDemo {
-    font-size: 7px;
-    min-height: 14px;
-    padding: 1px 6px;
+    min-height: 16px;
+    font-size: 8px;
+    padding: 2px 7px 2px;
     border-radius: 999px;
-    letter-spacing: 0.55px;
+    letter-spacing: 0.8px;
+    text-shadow: none !important;
   }
 
   .balanceValue,
   .balanceDemo {
     font-size: 14px !important;
+    text-shadow: none !important;
   }
 
   .actionButtons {
