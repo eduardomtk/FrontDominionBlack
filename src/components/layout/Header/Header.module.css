@@ -91,38 +91,69 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   position: relative;
   cursor: pointer;
   min-width: 0;
+  gap: 3px;
+  padding-top: 1px;
 }
 
 .balanceRealMode {}
 .balanceDemoMode {}
 
 .badgeReal {
-  font-size: 8px;
-  font-weight: 800;
-  color: #00c076;
-  background: rgba(0, 192, 118, 0.1);
-  padding: 1px 6px;
-  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #8fffd0;
+  background: linear-gradient(180deg, rgba(0, 192, 118, 0.22) 0%, rgba(0, 192, 118, 0.12) 100%);
+  border: 1px solid rgba(0, 192, 118, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(0, 192, 118, 0.18);
+  text-shadow: 0 0 8px rgba(0, 192, 118, 0.28) !important;
+  white-space: nowrap;
 }
 
 .badgeDemo {
-  font-size: 8px;
-  font-weight: 800;
-  color: #ff9800;
-  background: rgba(255, 152, 0, 0.1);
-  padding: 1px 6px;
-  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #ffd08a;
+  background: linear-gradient(180deg, rgba(255, 152, 0, 0.22) 0%, rgba(255, 152, 0, 0.12) 100%);
+  border: 1px solid rgba(255, 152, 0, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(255, 152, 0, 0.16);
   text-shadow: 0 0 8px rgba(255, 152, 0, 0.28) !important;
+  white-space: nowrap;
 }
 
 .balanceValue {
   color: #00c076 !important;
   font-weight: 900 !important;
   font-size: 18px !important;
-  text-shadow: 0 0 12px rgba(0, 192, 118, 0.45);
+  line-height: 1;
+  text-shadow:
+    0 0 12px rgba(0, 192, 118, 0.45),
+    0 0 24px rgba(0, 192, 118, 0.15);
   white-space: nowrap;
 }
 
@@ -130,7 +161,10 @@
   color: #ff9800 !important;
   font-weight: 900 !important;
   font-size: 18px !important;
-  text-shadow: 0 0 12px rgba(255, 152, 0, 0.45);
+  line-height: 1;
+  text-shadow:
+    0 0 12px rgba(255, 152, 0, 0.45),
+    0 0 24px rgba(255, 152, 0, 0.14);
   white-space: nowrap;
 }
 
@@ -690,14 +724,17 @@
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceContainer {
-  min-width: 78px;
+  min-width: 92px;
+  gap: 2px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeReal,
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeDemo {
   font-size: 7px;
-  padding: 1px 5px;
+  min-height: 14px;
+  padding: 1px 6px;
   border-radius: 999px;
+  letter-spacing: 0.55px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceValue,
@@ -813,8 +850,8 @@
   align-items: center;
   min-width: 0;
   width: 100%;
-  max-width: 158px;
-  height: 38px;
+  max-width: 168px;
+  height: 40px;
   padding: 4px 22px 4px 10px;
   border-radius: 8px;
   background: linear-gradient(180deg, #0a0d11 0%, #05070a 100%);
@@ -825,6 +862,7 @@
   cursor: pointer;
   overflow: hidden;
   text-align: center;
+  gap: 1px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceContainer::after {
@@ -851,26 +889,28 @@
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeReal,
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeDemo {
   background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   padding: 0 !important;
   border-radius: 0 !important;
   margin: 0 0 1px 0 !important;
+  min-height: auto;
   line-height: 1;
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.25px;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  box-shadow: none !important;
   width: 100%;
   text-align: center;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeReal {
-  color: #00c076 !important;
+  color: #29e398 !important;
   text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeDemo {
-  color: #ff9800 !important;
+  color: #ffb54d !important;
   text-shadow: none !important;
 }
 
@@ -1013,8 +1053,8 @@
     align-items: center;
     min-width: 0;
     width: 100%;
-    max-width: 158px;
-    height: 38px;
+    max-width: 168px;
+    height: 40px;
     padding: 4px 22px 4px 10px;
     border-radius: 8px;
     background: linear-gradient(180deg, #0a0d11 0%, #05070a 100%);
@@ -1025,6 +1065,7 @@
     cursor: pointer;
     overflow: hidden;
     text-align: center;
+    gap: 1px;
   }
 
   .balanceContainer::after {
@@ -1051,26 +1092,28 @@
   .badgeReal,
   .badgeDemo {
     background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     padding: 0 !important;
     border-radius: 0 !important;
     margin: 0 0 1px 0 !important;
+    min-height: auto;
     line-height: 1;
-    font-size: 7px;
-    font-weight: 800;
-    letter-spacing: 0.25px;
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
-    box-shadow: none !important;
     width: 100%;
     text-align: center;
   }
 
   .badgeReal {
-    color: #00c076 !important;
+    color: #29e398 !important;
     text-shadow: none !important;
   }
 
   .badgeDemo {
-    color: #ff9800 !important;
+    color: #ffb54d !important;
     text-shadow: none !important;
   }
 
@@ -1190,14 +1233,17 @@
   }
 
   .balanceContainer {
-    min-width: 78px;
+    min-width: 92px;
+    gap: 2px;
   }
 
   .badgeReal,
   .badgeDemo {
     font-size: 7px;
-    padding: 1px 5px;
+    min-height: 14px;
+    padding: 1px 6px;
     border-radius: 999px;
+    letter-spacing: 0.55px;
   }
 
   .balanceValue,
