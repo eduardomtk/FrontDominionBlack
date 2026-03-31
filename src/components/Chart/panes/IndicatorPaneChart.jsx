@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { calculateIndicatorSeries } from "@/indicators/calculators";
 import { buildPerformanceWindow } from "@/components/Chart/utils/renderWindow";
+import { isZoomInteractionActive, subscribeZoomInteraction } from "@/components/Chart/utils/zoomInteraction";
 
 const HISTORY_RESET_EVENT = "__lwc_history_reset__";
 
@@ -417,6 +418,7 @@ export default function IndicatorPaneChart({
   const revealRaf1Ref = useRef(0);
   const revealRaf2Ref = useRef(0);
   const batchRafRef = useRef(0);
+  const batchDelayTimerRef = useRef(0);
   const latestBatchRef = useRef({ candles: [], liveCandle: null });
 
   const levelsRef = useRef({ lower: 20, mid: 50, upper: 80, showMid: true });
@@ -1515,7 +1517,19 @@ export default function IndicatorPaneChart({
       }
     };
 
-    const scheduleFlush = () => {
+    const scheduleFlush = (opts = {}) => {
+      const immediate = opts?.immediate === true;
+
+      if (!immediate && isZoomInteractionActive()) {
+        if (batchDelayTimerRef.current) return;
+        batchDelayTimerRef.current = window.setTimeout(() => {
+          batchDelayTimerRef.current = 0;
+          if (batchRafRef.current) return;
+          batchRafRef.current = requestAnimationFrame(flushBatch);
+        }, 34);
+        return;
+      }
+
       if (batchRafRef.current) return;
       batchRafRef.current = requestAnimationFrame(flushBatch);
     };
@@ -1532,6 +1546,11 @@ export default function IndicatorPaneChart({
     try {
       masterChart?.timeScale?.()?.subscribeVisibleTimeRangeChange?.(onMasterRangeChange);
     } catch {}
+
+    const unsubZoom = subscribeZoomInteraction((active) => {
+      if (active) return;
+      scheduleFlush({ immediate: true });
+    });
 
     unsubRef.current = engine.subscribeCandles((candles, liveCandle) => {
       latestBatchRef.current = { candles, liveCandle };
@@ -1554,6 +1573,15 @@ export default function IndicatorPaneChart({
         } catch {}
         batchRafRef.current = 0;
       }
+      if (batchDelayTimerRef.current) {
+        try {
+          clearTimeout(batchDelayTimerRef.current);
+        } catch {}
+        batchDelayTimerRef.current = 0;
+      }
+      try {
+        unsubZoom?.();
+      } catch {}
       try {
         unsubRef.current?.();
       } catch {}

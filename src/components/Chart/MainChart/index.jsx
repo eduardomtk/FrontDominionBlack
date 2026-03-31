@@ -14,6 +14,7 @@ import TradeLinesManager from "../TradeLines/TradeLinesManager";
 import { CrosshairStore } from "@/components/Chart/Drawings/crosshair/CrosshairStore";
 import { buildSeriesPriceFormat, formatAxisPrice } from "@/components/Chart/priceScaleFormat";
 import { buildPerformanceWindow } from "@/components/Chart/utils/renderWindow";
+import { isZoomInteractionActive, markZoomInteractionActive, subscribeZoomInteraction } from "@/components/Chart/utils/zoomInteraction";
 
 // =====================================
 // ✅ Watermark Primitive (canvas overlay)
@@ -384,6 +385,7 @@ export default function MainChart({
   const overlayBufRef = useRef({ sig: "", buf: [], hasLive: false });
   const pendingOverlayRef = useRef(null);
   const overlayRafRef = useRef(0);
+  const overlayDelayTimerRef = useRef(0);
   const overlayLastRunRef = useRef(0);
   const mainSeriesSeededRef = useRef(false);
   const overlaysBootstrappedRef = useRef(false);
@@ -747,26 +749,38 @@ export default function MainChart({
     const buf = getOverlayBuffer(closed, live);
     pendingOverlayRef.current = buf;
 
-    if (overlayRafRef.current) return;
+    const scheduleFrame = () => {
+      if (overlayRafRef.current) return;
+      overlayRafRef.current = requestAnimationFrame(() => {
+        overlayRafRef.current = 0;
 
-    overlayRafRef.current = requestAnimationFrame(() => {
-      overlayRafRef.current = 0;
+        const now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+        const minMs = isZoomInteractionActive() ? 140 : 90;
 
-      const now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-      const MIN_MS = 90;
+        if (now - overlayLastRunRef.current < minMs) return;
+        overlayLastRunRef.current = now;
 
-      if (now - overlayLastRunRef.current < MIN_MS) return;
-      overlayLastRunRef.current = now;
+        const input = pendingOverlayRef.current;
+        if (!Array.isArray(input) || input.length === 0) return;
 
-      const input = pendingOverlayRef.current;
-      if (!Array.isArray(input) || input.length === 0) return;
+        try {
+          layer.applyData(input, inst);
+        } catch {}
 
-      try {
-        layer.applyData(input, inst);
-      } catch {}
+        forceChartScaleRecovery();
+      });
+    };
 
-      forceChartScaleRecovery();
-    });
+    if (isZoomInteractionActive()) {
+      if (overlayDelayTimerRef.current) return;
+      overlayDelayTimerRef.current = window.setTimeout(() => {
+        overlayDelayTimerRef.current = 0;
+        scheduleFrame();
+      }, 34);
+      return;
+    }
+
+    scheduleFrame();
   }
 
   function rebuildIndicatorLayer() {
@@ -786,6 +800,10 @@ export default function MainChart({
       if (overlayRafRef.current) cancelAnimationFrame(overlayRafRef.current);
     } catch {}
     overlayRafRef.current = 0;
+    if (overlayDelayTimerRef.current) {
+      try { clearTimeout(overlayDelayTimerRef.current); } catch {}
+      overlayDelayTimerRef.current = 0;
+    }
     pendingOverlayRef.current = null;
     overlayLastRunRef.current = 0;
     overlayBufRef.current = { sig: "", buf: [], hasLive: false };
@@ -1729,19 +1747,43 @@ export default function MainChart({
     const MAX_VISIBLE_BARS = 720;
     const MIN_VISIBLE_BARS = 12;
     const RIGHT_OFFSET = 15;
+    const WHEEL_IDLE_MS = 170;
+    const GESTURE_X_RESET_PX = 28;
 
     let rafId = 0;
-    let queuedEvent = null;
+    let idleTimer = 0;
+    const queued = {
+      clientX: NaN,
+      deltaY: 0,
+    };
+    const gesture = {
+      anchorLogical: NaN,
+      anchorRatio: NaN,
+      lastClientX: NaN,
+      lastAt: 0,
+    };
 
-    const applyWheelZoom = (event) => {
+    const resetGesture = () => {
+      gesture.anchorLogical = NaN;
+      gesture.anchorRatio = NaN;
+      gesture.lastClientX = NaN;
+      gesture.lastAt = 0;
+    };
+
+    const applyWheelZoom = () => {
       const chartApi = chartRef.current;
       const host = containerRef.current;
       const ts = chartApi?.timeScale?.();
       if (!chartApi || !host || !ts) return;
 
+      const deltaY = Number(queued.deltaY);
+      const clientX = Number(queued.clientX);
+      queued.deltaY = 0;
+      if (!Number.isFinite(deltaY) || Math.abs(deltaY) < 0.01 || !Number.isFinite(clientX)) return;
+
       const rect = host.getBoundingClientRect();
       const width = Math.max(1, rect.width || host.clientWidth || 1);
-      const x = Number(event.clientX) - rect.left;
+      const x = clientX - rect.left;
       if (!Number.isFinite(x) || x < 0 || x > width) return;
 
       const range = ts.getVisibleLogicalRange?.();
@@ -1750,41 +1792,52 @@ export default function MainChart({
       const from = Number(range.from);
       const to = Number(range.to);
       const currentSpan = to - from;
-      if (!Number.isFinite(from) || !Number.isFinite(to) || !Number.isFinite(currentSpan) || currentSpan <= 0.0001) {
-        return;
-      }
+      if (!Number.isFinite(from) || !Number.isFinite(to) || !Number.isFinite(currentSpan) || currentSpan <= 0.0001) return;
 
-      let anchorLogical = Number(ts.coordinateToLogical?.(x));
-      if (!Number.isFinite(anchorLogical)) {
-        const snap = CrosshairStore?.get?.() || null;
-        const logicalFromCrosshair = Number(snap?.l);
-        if (Number.isFinite(logicalFromCrosshair)) {
-          anchorLogical = logicalFromCrosshair;
-        } else {
-          const ratio = clampNumber(x / width, 0, 1);
-          anchorLogical = from + currentSpan * ratio;
+      const nowTs = Date.now();
+      const shouldResetAnchor =
+        !Number.isFinite(gesture.anchorLogical) ||
+        !Number.isFinite(gesture.anchorRatio) ||
+        (nowTs - Number(gesture.lastAt || 0)) > WHEEL_IDLE_MS ||
+        (Number.isFinite(gesture.lastClientX) && Math.abs(x - gesture.lastClientX) > GESTURE_X_RESET_PX);
+
+      if (shouldResetAnchor) {
+        let anchorLogical = Number(ts.coordinateToLogical?.(x));
+        if (!Number.isFinite(anchorLogical)) {
+          const snap = CrosshairStore?.get?.() || null;
+          const logicalFromCrosshair = Number(snap?.l);
+          if (Number.isFinite(logicalFromCrosshair)) {
+            anchorLogical = logicalFromCrosshair;
+          } else {
+            const ratio = clampNumber(x / width, 0, 1);
+            anchorLogical = from + currentSpan * ratio;
+          }
         }
+
+        gesture.anchorLogical = anchorLogical;
+        gesture.anchorRatio = clampNumber(x / width, 0, 1);
       }
 
-      const anchorRatio = clampNumber((anchorLogical - from) / currentSpan, 0, 1);
-      const zoomIn = Number(event.deltaY) < 0;
-      const zoomFactor = zoomIn ? 0.88 : 1.12;
-      let nextSpan = currentSpan * zoomFactor;
+      gesture.lastClientX = x;
+      gesture.lastAt = nowTs;
+
+      const wheelSteps = clampNumber(deltaY / 120, -3, 3);
+      if (!Number.isFinite(wheelSteps) || Math.abs(wheelSteps) < 0.001) return;
+
+      let nextSpan = currentSpan * Math.pow(1.12, wheelSteps);
 
       const closedCount = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current.length : 0;
       const hasLive = !!lastLiveCandleRef.current;
       const totalBars = Math.max(0, closedCount) + (hasLive ? 1 : 0);
 
-      // ✅ IMPORTANTE:
-      // Durante o WHEEL, nunca "puxar" o gráfico para trás só para reenquadrar
-      // no teto soberano de rightOffset. Se o range atual já estiver mais à direita,
-      // usamos o TO atual como teto temporário do zoom. Assim o wheel fica livre,
-      // sem recálculo lateral antes de aplicar o zoom.
       const fixedMaxTo = Math.max(RIGHT_OFFSET + 1, (totalBars - 1) + RIGHT_OFFSET);
       const effectiveMaxTo = Math.max(fixedMaxTo, to);
       const hardMaxSpan = Math.max(MIN_VISIBLE_BARS, Math.min(MAX_VISIBLE_BARS, effectiveMaxTo - MIN_LEFT_FROM));
 
       nextSpan = clampNumber(nextSpan, MIN_VISIBLE_BARS, hardMaxSpan);
+
+      const anchorLogical = Number(gesture.anchorLogical);
+      const anchorRatio = clampNumber(Number(gesture.anchorRatio), 0, 1);
 
       let nextFrom = anchorLogical - anchorRatio * nextSpan;
       let nextTo = nextFrom + nextSpan;
@@ -1808,9 +1861,7 @@ export default function MainChart({
 
       const currentMid = from + currentSpan / 2;
       const nextMid = nextFrom + nextSpan / 2;
-      if (Math.abs(nextSpan - currentSpan) < 0.0001 && Math.abs(nextMid - currentMid) < 0.0001) {
-        return;
-      }
+      if (Math.abs(nextSpan - currentSpan) < 0.0001 && Math.abs(nextMid - currentMid) < 0.0001) return;
 
       try {
         ts.setVisibleLogicalRange?.({ from: nextFrom, to: nextTo });
@@ -1819,34 +1870,44 @@ export default function MainChart({
 
     const flushWheel = () => {
       rafId = 0;
-      const event = queuedEvent;
-      queuedEvent = null;
-      if (event) applyWheelZoom(event);
+      applyWheelZoom();
     };
 
     const onWheel = (event) => {
       if (!event) return;
       event.preventDefault();
       event.stopPropagation();
-      queuedEvent = {
-        clientX: event.clientX,
-        deltaY: event.deltaY,
-      };
-      if (!rafId) {
-        rafId = requestAnimationFrame(flushWheel);
+
+      markZoomInteractionActive(WHEEL_IDLE_MS);
+
+      queued.clientX = Number(event.clientX);
+      queued.deltaY += Number(event.deltaY) || 0;
+
+      if (idleTimer) {
+        try { clearTimeout(idleTimer); } catch {}
       }
+      idleTimer = window.setTimeout(() => {
+        idleTimer = 0;
+        resetGesture();
+      }, WHEEL_IDLE_MS + 10);
+
+      if (!rafId) rafId = requestAnimationFrame(flushWheel);
     };
 
     container.addEventListener("wheel", onWheel, { passive: false, capture: true });
 
     return () => {
       if (rafId) {
-        try {
-          cancelAnimationFrame(rafId);
-        } catch {}
+        try { cancelAnimationFrame(rafId); } catch {}
         rafId = 0;
       }
-      queuedEvent = null;
+      if (idleTimer) {
+        try { clearTimeout(idleTimer); } catch {}
+        idleTimer = 0;
+      }
+      queued.deltaY = 0;
+      queued.clientX = NaN;
+      resetGesture();
       try {
         container.removeEventListener("wheel", onWheel, true);
       } catch {}
@@ -1884,6 +1945,17 @@ export default function MainChart({
       } catch {}
     };
   }, []);
+
+  useEffect(() => {
+    return subscribeZoomInteraction((active) => {
+      if (active) return;
+      if (!mainSeriesSeededRef.current || !overlaysBootstrappedRef.current) return;
+      const closed = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current : [];
+      const live = lastLiveCandleRef.current;
+      scheduleOverlayApply(closed, live);
+    });
+  }, []);
+
 
   // ✅ overlays só sobem depois que a série principal já nasceu neste chart
   useEffect(() => {
