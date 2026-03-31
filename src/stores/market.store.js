@@ -666,6 +666,8 @@ export const useMarketStore = create((set, get) => {
       const timeframeSec = TF_MAP[tf] || 60;
 
       const key = makePairKey(symbol, tf);
+      const prevPinCount = Number(get().pinned?.[key] || 0);
+      const wasAlreadyPinned = prevPinCount > 0;
 
       clearOrphanCloseTimer(key);
 
@@ -710,7 +712,13 @@ export const useMarketStore = create((set, get) => {
         }));
       }
 
-      wsPinPair(wsManager, symbol, tf);
+      const isWsActive = typeof wsManager?.isPairActive === "function"
+        ? !!wsManager.isPairActive(symbol, tf)
+        : false;
+
+      if (!wasAlreadyPinned || !isWsActive) {
+        wsPinPair(wsManager, symbol, tf);
+      }
     },
 
     unpinPair: ({ pair, timeframe = "M1" }) => {
@@ -901,6 +909,18 @@ export const useMarketStore = create((set, get) => {
       }
 
       set((state) => {
+        const isBackgroundPair = !!state.currentFocusKey && state.currentFocusKey !== key;
+        if (
+          isBackgroundPair &&
+          (type === "market_snapshot" ||
+            type === "history_stream_start" ||
+            type === "history" ||
+            type === "history_stream" ||
+            type === "history_prepend")
+        ) {
+          return state;
+        }
+
         const current = state.pairs[key];
         if (!current) return state;
 

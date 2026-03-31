@@ -137,14 +137,30 @@ export default class MarketWSManager {
 
     if (!this.client.ws || this.client.ws.readyState !== WebSocket.OPEN) this.client.connect();
 
+    const wasPinned = this.pinnedKeys.has(key);
+    const wasActive = this.activeKeys.has(key);
+    const isSubscribed = !!this.client.isSubscribed?.(symbol, tf);
+
     this.pinnedKeys.add(key);
     this.activeKeys.add(key);
 
     const now = Date.now();
     const last = Number(this.lastForceAtByKey.get(key) || 0);
-    if (forceResync || now - last >= 600 || !this.client.isSubscribed?.(symbol, tf)) {
+
+    if (!isSubscribed) {
+      this.lastForceAtByKey.set(key, now);
+      try { this.client.subscribe(symbol, tf, { resnapshot: true, requestLiveSeed: false }); } catch {}
+      return;
+    }
+
+    if (forceResync && now - last >= 600) {
       this.lastForceAtByKey.set(key, now);
       try { this.client.reaffirm(symbol, tf, { resnapshot: true, requestLiveSeed: false }); } catch {}
+      return;
+    }
+
+    if (!wasPinned && !wasActive) {
+      this.lastForceAtByKey.set(key, now);
     }
   }
 
