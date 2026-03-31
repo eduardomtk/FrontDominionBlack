@@ -82,7 +82,6 @@ function getPriceScaleMinWidth(symbol) {
   return 72;
 }
 
-
 const PRICE_SCALE_RESET_EVENT = "__lwc_price_scale_reset__";
 
 function findNearestTimeIndex(sortedTimes, targetTime) {
@@ -1009,6 +1008,8 @@ function WorkspacePanes({
     if (!chart || !ts) return;
 
     try {
+      const nextWidth = getPriceScaleMinWidth(symbol);
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent(PRICE_SCALE_RESET_EVENT));
       }
@@ -1018,7 +1019,7 @@ function WorkspacePanes({
           autoScale: true,
           visible: true,
           borderVisible: false,
-          minimumWidth: priceScaleMinWidth,
+          minimumWidth: nextWidth,
         },
         handleScroll: {
           mouseWheel: false,
@@ -1210,7 +1211,7 @@ function WorkspacePanes({
     };
 
     resetState.raf = requestAnimationFrame(tick);
-  }, [masterChart, priceScaleMinWidth, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
+  }, [masterChart, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility, symbol]);
 
   useEffect(() => {
     const guard = prependGuardRef.current;

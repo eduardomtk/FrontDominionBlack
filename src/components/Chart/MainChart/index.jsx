@@ -316,7 +316,6 @@ function getRightPriceScaleWidth(chart, fallback = 110) {
   return Number.isFinite(fb) && fb > 0 ? fb : 110;
 }
 
-
 function isForexPriceSymbol(symbol) {
   const raw = String(symbol || "").trim().toUpperCase();
   const compact = raw.replace(/\//g, "");
@@ -327,7 +326,6 @@ function buildPriceFormatForSymbol(symbol) {
   if (isForexPriceSymbol(symbol)) {
     return { type: "price", precision: 4, minMove: 0.0001 };
   }
-
   return { type: "price", precision: 2, minMove: 0.01 };
 }
 
@@ -1542,6 +1540,14 @@ export default function MainChart({
     ensureWatermarkPrimitive();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backgroundUrl, backgroundOpacity, backgroundSize, backgroundPosition, backgroundSmoothing, backgroundFit]);
+
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+    try {
+      series.applyOptions?.({ priceFormat: PRICE_FORMAT });
+    } catch {}
+  }, [PRICE_FORMAT]);
 
   useEffect(() => {
     const chart = chartRef.current;
