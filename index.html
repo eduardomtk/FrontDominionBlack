@@ -80,7 +80,12 @@
         if (!isProdHost) return;
 
         var noop = function () {};
-        
+
+        console.log = noop;
+        console.info = noop;
+        console.warn = noop;
+        console.debug = noop;
+        console.error = noop;
       })();
     </script>
   </head>
