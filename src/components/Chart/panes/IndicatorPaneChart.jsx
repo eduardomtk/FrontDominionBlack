@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createChart, CrosshairMode, LineStyle } from "lightweight-charts";
 import { calculateIndicatorSeries } from "@/indicators/calculators";
+import { buildPerformanceWindow } from "@/components/Chart/utils/renderWindow";
 
 const HISTORY_RESET_EVENT = "__lwc_history_reset__";
 
@@ -1162,7 +1163,14 @@ export default function IndicatorPaneChart({
     const flushBatch = () => {
       batchRafRef.current = 0;
       const { candles, liveCandle } = latestBatchRef.current || {};
-      const full = buildFullCandleSeries(candles, liveCandle);
+      const full = buildPerformanceWindow(candles, liveCandle, masterChart, {
+        fallbackRecentBars: 1500,
+        leftWarmupBars: 420,
+        leftViewportBufferBars: 240,
+        rightViewportBufferBars: 140,
+        maxWindowBars: 3000,
+        minWindowBars: 900,
+      });
       const fullSig = getFullSeriesSig(full);
 
       if (!full.length) {
@@ -1510,12 +1518,34 @@ export default function IndicatorPaneChart({
       batchRafRef.current = requestAnimationFrame(flushBatch);
     };
 
+    let rangeRafId = 0;
+    const onMasterRangeChange = () => {
+      if (rangeRafId) return;
+      rangeRafId = requestAnimationFrame(() => {
+        rangeRafId = 0;
+        scheduleFlush();
+      });
+    };
+
+    try {
+      masterChart?.timeScale?.()?.subscribeVisibleTimeRangeChange?.(onMasterRangeChange);
+    } catch {}
+
     unsubRef.current = engine.subscribeCandles((candles, liveCandle) => {
       latestBatchRef.current = { candles, liveCandle };
       scheduleFlush();
     });
 
     return () => {
+      if (rangeRafId) {
+        try {
+          cancelAnimationFrame(rangeRafId);
+        } catch {}
+        rangeRafId = 0;
+      }
+      try {
+        masterChart?.timeScale?.()?.unsubscribeVisibleTimeRangeChange?.(onMasterRangeChange);
+      } catch {}
       if (batchRafRef.current) {
         try {
           cancelAnimationFrame(batchRafRef.current);
@@ -1527,7 +1557,7 @@ export default function IndicatorPaneChart({
       } catch {}
       unsubRef.current = null;
     };
-  }, [engine, paneType, relevantInstances]);
+  }, [engine, paneType, relevantInstances, masterChart]);
 
   return (
     <div

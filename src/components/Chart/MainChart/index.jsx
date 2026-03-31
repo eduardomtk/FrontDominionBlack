@@ -13,6 +13,7 @@ import TradeLinesManager from "../TradeLines/TradeLinesManager";
 // ✅ SOBERANO: CrosshairStore alimentado direto do LWC
 import { CrosshairStore } from "@/components/Chart/Drawings/crosshair/CrosshairStore";
 import { buildSeriesPriceFormat, formatAxisPrice } from "@/components/Chart/priceScaleFormat";
+import { buildPerformanceWindow } from "@/components/Chart/utils/renderWindow";
 
 // =====================================
 // ✅ Watermark Primitive (canvas overlay)
@@ -638,54 +639,26 @@ export default function MainChart({
   function getOverlayBuffer(closed, live) {
     const st = overlayBufRef.current;
     const arr = Array.isArray(closed) ? closed : [];
+    const perfWindow = buildPerformanceWindow(arr, live, chartRef.current, {
+      fallbackRecentBars: 1600,
+      leftWarmupBars: 420,
+      leftViewportBufferBars: 260,
+      rightViewportBufferBars: 160,
+      maxWindowBars: 3200,
+      minWindowBars: 1000,
+    });
 
-    const sig = calcClosedSig(arr);
-    if (sig !== st.sig) {
+    const sig = calcClosedSig(perfWindow);
+    if (sig !== st.sig || !Array.isArray(st.buf) || st.buf.length !== perfWindow.length) {
       st.sig = sig;
-      st.buf = arr.slice();
+      st.buf = perfWindow.slice();
       st.hasLive = false;
     } else {
-      if (!Array.isArray(st.buf) || st.buf.length < arr.length) {
-        st.buf = arr.slice();
-        st.hasLive = false;
-      }
-      if (!st.hasLive && st.buf.length !== arr.length) {
-        st.buf = arr.slice();
-      }
-      if (st.hasLive && st.buf.length !== arr.length + 1) {
-        st.buf = arr.slice();
-        st.hasLive = false;
-      }
+      st.buf = perfWindow.slice();
+      st.hasLive = false;
     }
 
-    const buf = st.buf;
-
-    if (live && typeof live === "object") {
-      const lt = Number(live?.time);
-      if (Number.isFinite(lt)) {
-        if (st.hasLive) {
-          buf[buf.length - 1] = live;
-        } else {
-          const last = buf.length ? buf[buf.length - 1] : null;
-          const lastT = last ? Number(last?.time) : NaN;
-
-          if (Number.isFinite(lastT) && lastT === lt) {
-            buf[buf.length - 1] = live;
-            st.hasLive = false;
-          } else {
-            buf.push(live);
-            st.hasLive = true;
-          }
-        }
-      }
-    } else {
-      if (st.hasLive) {
-        buf.pop();
-        st.hasLive = false;
-      }
-    }
-
-    return buf;
+    return st.buf;
   }
 
   function forceChartScaleRecovery({ resetPriceScale = false } = {}) {
@@ -1876,6 +1849,38 @@ export default function MainChart({
       queuedEvent = null;
       try {
         container.removeEventListener("wheel", onWheel, true);
+      } catch {}
+    };
+  }, []);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart?.timeScale) return;
+
+    let rafId = 0;
+    const requestOverlayRefresh = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        if (!mainSeriesSeededRef.current || !overlaysBootstrappedRef.current) return;
+        const closed = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current : [];
+        const live = lastLiveCandleRef.current;
+        scheduleOverlayApply(closed, live);
+      });
+    };
+
+    try {
+      chart.timeScale().subscribeVisibleTimeRangeChange?.(requestOverlayRefresh);
+    } catch {}
+
+    return () => {
+      if (rafId) {
+        try {
+          cancelAnimationFrame(rafId);
+        } catch {}
+      }
+      try {
+        chart.timeScale().unsubscribeVisibleTimeRangeChange?.(requestOverlayRefresh);
       } catch {}
     };
   }, []);
