@@ -84,6 +84,7 @@ function getPriceScaleMinWidth(symbol) {
 
 const PRICE_SCALE_RESET_EVENT = "__lwc_price_scale_reset__";
 
+
 function findNearestTimeIndex(sortedTimes, targetTime) {
   const arr = Array.isArray(sortedTimes) ? sortedTimes : [];
   const len = arr.length;
@@ -1003,40 +1004,15 @@ function WorkspacePanes({
     stopKeyboardPanAnimation();
     stopRealtimeResetAnimation();
 
+    if (typeof window !== "undefined") {
+      try {
+        window.dispatchEvent(new CustomEvent(PRICE_SCALE_RESET_EVENT));
+      } catch {}
+    }
+
     const chart = masterChart;
     const ts = chart?.timeScale?.();
     if (!chart || !ts) return;
-
-    try {
-      const nextWidth = getPriceScaleMinWidth(symbol);
-
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent(PRICE_SCALE_RESET_EVENT));
-      }
-
-      chart.applyOptions({
-        rightPriceScale: {
-          autoScale: true,
-          visible: true,
-          borderVisible: false,
-          minimumWidth: nextWidth,
-        },
-        handleScroll: {
-          mouseWheel: false,
-          pressedMouseMove: true,
-          horzTouchDrag: true,
-          vertTouchDrag: false,
-        },
-        handleScale: {
-          mouseWheel: false,
-          pinch: true,
-          axisPressedMouseMove: {
-            time: true,
-            price: true,
-          },
-        },
-      });
-    } catch {}
 
     const resetState = realtimeResetRef.current;
     const token = resetState.token;
@@ -1211,7 +1187,7 @@ function WorkspacePanes({
     };
 
     resetState.raf = requestAnimationFrame(tick);
-  }, [masterChart, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility, symbol]);
+  }, [masterChart, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
 
   useEffect(() => {
     const guard = prependGuardRef.current;

@@ -1392,7 +1392,7 @@ export default function MainChart({
         mouseWheel: false,
         pressedMouseMove: true,
         horzTouchDrag: true,
-        vertTouchDrag: manualPriceScaleRef.current,
+        vertTouchDrag: false,
       },
       handleScale: {
         mouseWheel: false,
