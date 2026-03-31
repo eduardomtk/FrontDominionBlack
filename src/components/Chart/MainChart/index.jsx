@@ -9,6 +9,7 @@ import { useMarketStore } from "@/stores/market.store";
 import ChartBridge from "./ChartBridge";
 import IndicatorLayer from "./indicatorLayer";
 import TradeLinesManager from "../TradeLines/TradeLinesManager";
+import { formatCompactAxisPrice } from "@/components/Chart/utils/priceAxisFormat";
 
 // ✅ SOBERANO: CrosshairStore alimentado direto do LWC
 import { CrosshairStore } from "@/components/Chart/Drawings/crosshair/CrosshairStore";
@@ -324,9 +325,9 @@ function isForexPriceSymbol(symbol) {
 
 function buildPriceFormatForSymbol(symbol) {
   if (isForexPriceSymbol(symbol)) {
-    return { type: "price", precision: 4, minMove: 0.0001 };
+    return { type: "price", precision: 5, minMove: 0.00001 };
   }
-  return { type: "price", precision: 2, minMove: 0.01 };
+  return { type: "price", precision: 3, minMove: 0.001 };
 }
 
 export default function MainChart({
@@ -718,6 +719,9 @@ export default function MainChart({
             visible: true,
             borderVisible: false,
             minimumWidth: priceScaleMinWidth,
+          },
+          localization: {
+            priceFormatter: (price) => formatCompactAxisPrice(price),
           },
           timeScale: {
             visible: Boolean(showTimeScale),
@@ -1375,7 +1379,12 @@ export default function MainChart({
     const chart = createChart(container, {
       width,
       height,
-      layout: { background: { color: "rgba(0,0,0,0)" }, textColor: "#cbd5f5" },
+      layout: {
+        background: { color: "rgba(0,0,0,0)" },
+        textColor: "#cbd5f5",
+        fontSize: 12,
+        fontFamily: "Inter, system-ui, sans-serif",
+      },
       grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
       timeScale: {
         visible: Boolean(showTimeScale),
@@ -1388,6 +1397,9 @@ export default function MainChart({
         minBarSpacing: 2.45,
       },
       rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth },
+      localization: {
+        priceFormatter: (price) => formatCompactAxisPrice(price),
+      },
       handleScroll: {
         mouseWheel: false,
         pressedMouseMove: true,
