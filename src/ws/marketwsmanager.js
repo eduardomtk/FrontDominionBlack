@@ -5,6 +5,7 @@ export default class MarketWSManager {
     if (!url) throw new Error("MarketWSManager: url é obrigatório");
     this.onMarketDataCallback = onMarketEvent || null;
     this.activeKeys = new Set();
+    this.pinnedKeys = new Set();
     this.currentKey = "";
     this.url = url;
     this.lastForceAtByKey = new Map();
@@ -63,12 +64,11 @@ export default class MarketWSManager {
 
   _handleInternalEvent(event) {
     const normalized = this._normalizeEvent(event);
-    if (!normalized || !this.currentKey) return;
+    if (!normalized) return;
     const { pair, type, timeframe, data } = normalized;
-    const [currentPair, currentTf] = this.currentKey.split("|");
-    if (pair !== currentPair) return;
-    const tf = timeframe || currentTf || "M1";
-    if (tf !== currentTf) return;
+    const tf = timeframe || "M1";
+    const key = this._makeKey(pair, tf);
+    if (!key || !this.activeKeys.has(key)) return;
     this._emit(pair, type, tf, data);
   }
 
@@ -81,6 +81,7 @@ export default class MarketWSManager {
     console.log("🧨 [MarketWSManager] desconectando WS...");
     try { this.client.ws?.close(); } catch {}
     this.activeKeys.clear();
+    this.pinnedKeys.clear();
     this.currentKey = "";
     this.lastForceAtByKey.clear();
   }
@@ -91,40 +92,77 @@ export default class MarketWSManager {
     const tf = String(timeframe || "M1").toUpperCase().trim() || "M1";
     const key = this._makeKey(symbol, tf);
     if (!key) return;
+
+    const opts = options && typeof options === "object" ? options : {};
+    const forceResync = !!opts.forceResync;
+    const prevKey = this.currentKey;
+
+    if (!this.client.ws || this.client.ws.readyState !== WebSocket.OPEN) this.client.connect();
+
+    const wasActive = this.activeKeys.has(key);
+    this.currentKey = key;
+    this.activeKeys.add(key);
+
+    const now = Date.now();
+    const last = Number(this.lastForceAtByKey.get(key) || 0);
+    const isSubscribed = !!this.client.isSubscribed?.(symbol, tf);
+
+    if (!isSubscribed) {
+      this.lastForceAtByKey.set(key, now);
+      try { this.client.subscribe(symbol, tf, { resnapshot: true, requestLiveSeed: false }); } catch {}
+    } else if ((forceResync || wasActive) && now - last >= 600) {
+      this.lastForceAtByKey.set(key, now);
+      try { this.client.reaffirm(symbol, tf, { resnapshot: true, requestLiveSeed: false }); } catch {}
+    }
+
+    if (prevKey && prevKey !== key && !this.pinnedKeys.has(prevKey)) {
+      const [prevPair, prevTf] = prevKey.split("|");
+      try { this.client.unsubscribe(prevPair, prevTf || "M1"); } catch {}
+      this.activeKeys.delete(prevKey);
+      this.lastForceAtByKey.delete(prevKey);
+    }
+
+    console.log("📡 [MarketWSManager] par focado:", symbol, tf, prevKey ? `prev=${prevKey}` : "", this.pinnedKeys.size ? `pins=${this.pinnedKeys.size}` : "");
+  }
+
+  pinPair(pair, timeframe = "M1", options = undefined) {
+    if (!pair) return;
+    const symbol = String(pair).toUpperCase().trim();
+    const tf = String(timeframe || "M1").toUpperCase().trim() || "M1";
+    const key = this._makeKey(symbol, tf);
+    if (!key) return;
+
     const opts = options && typeof options === "object" ? options : {};
     const forceResync = !!opts.forceResync;
 
     if (!this.client.ws || this.client.ws.readyState !== WebSocket.OPEN) this.client.connect();
 
-    if (this.currentKey === key) {
-      if (!forceResync) return;
-      const now = Date.now();
-      const last = Number(this.lastForceAtByKey.get(key) || 0);
-      if (now - last < 600) return;
+    this.pinnedKeys.add(key);
+    this.activeKeys.add(key);
+
+    const now = Date.now();
+    const last = Number(this.lastForceAtByKey.get(key) || 0);
+    if (forceResync || now - last >= 600 || !this.client.isSubscribed?.(symbol, tf)) {
       this.lastForceAtByKey.set(key, now);
-      console.log("♻️ [MarketWSManager] forçando resync soberano:", symbol, tf);
       try { this.client.reaffirm(symbol, tf, { resnapshot: true, requestLiveSeed: false }); } catch {}
-      return;
     }
+  }
 
-    const prevKey = this.currentKey;
-    if (prevKey && prevKey !== key) {
-      this.lastForceAtByKey.delete(prevKey);
-    }
+  unpinPair(pair, timeframe = "M1") {
+    if (!pair) return;
+    const symbol = String(pair).toUpperCase().trim();
+    const tf = String(timeframe || "M1").toUpperCase().trim() || "M1";
+    const key = this._makeKey(symbol, tf);
+    if (!key) return;
 
-    this.currentKey = key;
-    this.activeKeys = new Set([key]);
-    this.lastForceAtByKey.set(key, Date.now());
+    this.pinnedKeys.delete(key);
 
-    try {
-      if (typeof this.client.replaceSubscription === "function") {
-        this.client.replaceSubscription(symbol, tf, { resnapshot: true, requestLiveSeed: false });
-      } else {
-        this.client.subscribe(symbol, tf, { resnapshot: true, requestLiveSeed: false });
-      }
-    } catch {}
+    if (this.currentKey === key) return;
+    if (!this.activeKeys.has(key)) return;
 
-    console.log("📡 [MarketWSManager] par aberto exclusivo:", symbol, tf, prevKey ? `prev=${prevKey}` : "");
+    try { this.client.unsubscribe(symbol, tf); } catch {}
+    this.activeKeys.delete(key);
+    this.lastForceAtByKey.delete(key);
   }
 
   closePair(pair, timeframe = "M1") {
@@ -132,10 +170,14 @@ export default class MarketWSManager {
     const symbol = String(pair).toUpperCase().trim();
     const tf = String(timeframe || "M1").toUpperCase().trim() || "M1";
     const key = this._makeKey(symbol, tf);
-    if (!key || this.currentKey !== key) return;
+    if (!key) return;
+
+    if (this.currentKey === key) this.currentKey = "";
+    if (this.pinnedKeys.has(key)) return;
+    if (!this.activeKeys.has(key)) return;
+
     try { this.client.unsubscribe(symbol, tf); } catch {}
-    this.activeKeys.clear();
-    this.currentKey = "";
+    this.activeKeys.delete(key);
     this.lastForceAtByKey.delete(key);
   }
 

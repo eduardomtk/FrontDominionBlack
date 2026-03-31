@@ -343,6 +343,22 @@ function wsOpenPair(wsManager, symbol, timeframe, options = undefined) {
   wsManager.openPair(symbol, timeframe, options);
 }
 
+function wsPinPair(wsManager, symbol, timeframe, options = undefined) {
+  if (typeof wsManager?.pinPair === "function") {
+    wsManager.pinPair(symbol, timeframe, options);
+    return;
+  }
+  if (typeof wsManager?.openPair !== "function") return;
+  wsManager.openPair(symbol, timeframe, options);
+}
+
+function wsUnpinPair(wsManager, symbol, timeframe) {
+  if (typeof wsManager?.unpinPair === "function") {
+    wsManager.unpinPair(symbol, timeframe);
+    return;
+  }
+}
+
 function wsClosePair(wsManager, symbol, timeframe) {
   if (typeof wsManager?.closePair !== "function") return;
   wsManager.closePair(symbol, timeframe);
@@ -380,13 +396,19 @@ function clearPostHydrationResyncTimers(key) {
 
 function schedulePostHydrationResync() {}
 
-function prunePairsKeepRecent(pairs, focusKey, keepCount = 4) {
+function prunePairsKeepRecent(pairs, focusKey, keepCount = 4, pinned = {}) {
   const src = pairs && typeof pairs === "object" ? pairs : {};
+  const pinMap = pinned && typeof pinned === "object" ? pinned : {};
   const entries = Object.entries(src);
   if (entries.length <= keepCount) return src;
 
   const ordered = entries.sort((a, b) => Number(b?.[1]?._hotTouchedAt || 0) - Number(a?.[1]?._hotTouchedAt || 0));
   const keep = new Set(focusKey ? [focusKey] : []);
+
+  for (const [k] of ordered) {
+    if (Number(pinMap?.[k] || 0) > 0) keep.add(k);
+  }
+
   for (const [k] of ordered) {
     keep.add(k);
     if (keep.size >= keepCount) break;
@@ -688,7 +710,7 @@ export const useMarketStore = create((set, get) => {
         }));
       }
 
-      wsOpenPair(wsManager, symbol, tf);
+      wsPinPair(wsManager, symbol, tf);
     },
 
     unpinPair: ({ pair, timeframe = "M1" }) => {
@@ -711,6 +733,7 @@ export const useMarketStore = create((set, get) => {
       });
 
       if (next <= 0 && get().pairs?.[key]) {
+        wsUnpinPair(wsManager, symbol, tf);
         scheduleOrphanClose({ key, symbol, timeframe: tf, set, get, wsManager });
       }
     },
@@ -822,7 +845,6 @@ export const useMarketStore = create((set, get) => {
         const incomingSig = makeHistorySig(snapshot.candles);
 
         set((state) => {
-          if (state.currentFocusKey && state.currentFocusKey !== key) return state;
           const current = state.pairs?.[key];
           if (!current) return state;
 
@@ -879,7 +901,6 @@ export const useMarketStore = create((set, get) => {
       }
 
       set((state) => {
-        if (state.currentFocusKey && state.currentFocusKey !== key) return state;
         const current = state.pairs[key];
         if (!current) return state;
 
@@ -1226,7 +1247,7 @@ export const useMarketStore = create((set, get) => {
 
         return {
           currentFocusKey: key,
-          pairs: prunePairsKeepRecent(nextPairs, key, 4),
+          pairs: prunePairsKeepRecent(nextPairs, key, 4, state.pinned),
         };
       });
 

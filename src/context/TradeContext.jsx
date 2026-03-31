@@ -19,12 +19,18 @@ const WALLET_SYNC_DEBOUNCE_MS = 400;
 const DEBUG_TRADE_HISTORY = true;
 
 // ✅ Edge function soberana (settlement + history)
-const SETTLE_FUNCTION_CANDIDATES = ["trade_settle", "trade-settle"];
+const SETTLE_FUNCTION_NAME = "trade-settle";
 
 function toMs(v) {
   const n = Number(v);
   if (!Number.isFinite(n)) return NaN;
   return n < 1e11 ? n * 1000 : n;
+}
+
+function toIntMs(v, fallback = NaN) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.floor(n);
 }
 
 function normalizeAccountType(v, fallback) {
@@ -212,6 +218,51 @@ function emptyHistoryByAccount() {
   return { REAL: [], DEMO: [] };
 }
 
+function emptyPinsByAccount() {
+  return { REAL: [], DEMO: [] };
+}
+
+function openTradesStorageKey(uid, acc) {
+  const u = String(uid || "").trim();
+  const a = normalizeAccountType(acc, "DEMO");
+  return u ? `open-trades:${u}:${a}` : "";
+}
+
+function readOpenTradesBackup(uid, acc) {
+  if (typeof localStorage === "undefined") return [];
+  const key = openTradesStorageKey(uid, acc);
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.map(mapOpenTradeRow).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeOpenTradesBackup(uid, acc, trades) {
+  if (typeof localStorage === "undefined") return;
+  const key = openTradesStorageKey(uid, acc);
+  if (!key) return;
+  try {
+    const arr = (Array.isArray(trades) ? trades : []).map((t) => ({
+      trade_id: String(t?.tradeId || t?.id || ""),
+      account_type: normalizeAccountType(t?.account, acc),
+      symbol: normalizePair(t?.symbol ?? t?.asset),
+      timeframe: normalizeTf(t?.timeframe || t?.expirationLabel),
+      direction: normalizeDirection(t?.direction),
+      amount: Number(t?.amount || 0),
+      payout: toNumberSafe(t?.payout),
+      open_price: toNumberSafe(t?.openPrice),
+      opened_at: Number.isFinite(toMs(t?.openedAt)) ? toMs(t?.openedAt) : null,
+      expires_at: Number.isFinite(toMs(t?.expiresAt)) ? toMs(t?.expiresAt) : Number.isFinite(toMs(t?.expirationTime)) ? toMs(t?.expirationTime) : null,
+    })).filter((t) => t.trade_id && Number.isFinite(Number(t.expires_at)));
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch {}
+}
+
 export function TradeProvider({ children }) {
   const [activeTrades, setActiveTrades] = useState([]);
   const [tradesByAccount, setTradesByAccount] = useState(() => emptyHistoryByAccount());
@@ -254,6 +305,14 @@ export function TradeProvider({ children }) {
     activeTradesRef.current = Array.isArray(activeTrades) ? activeTrades : [];
   }, [activeTrades]);
 
+  const getServerNowMs = useCallback(() => {
+    try {
+      const now = Number(useMarketStore.getState?.().getServerNowMs?.());
+      if (Number.isFinite(now) && now > 0) return now;
+    } catch {}
+    return Date.now();
+  }, []);
+
   const expireTimersRef = useRef(new Map());
 
   function bindEngine(engine) {
@@ -286,16 +345,22 @@ export function TradeProvider({ children }) {
 
     const acc = normalizeAccountType(openTradeNormalized?.account, accountType);
 
-    const expMs =
+    const expMsRaw =
       Number.isFinite(toMs(openTradeNormalized?.expiresAt)) ? toMs(openTradeNormalized?.expiresAt)
       : Number.isFinite(toMs(openTradeNormalized?.expirationTime)) ? toMs(openTradeNormalized?.expirationTime)
       : NaN;
 
-    if (!Number.isFinite(expMs)) return;
+    if (!Number.isFinite(expMsRaw)) return;
 
-    const openedAt =
+    const openedAtRaw =
       Number.isFinite(toMs(openTradeNormalized?.openedAt)) ? toMs(openTradeNormalized?.openedAt)
-      : Date.now();
+      : getServerNowMs();
+
+    const expMs = toIntMs(expMsRaw);
+    const openedAt = toIntMs(openedAtRaw);
+
+    if (!Number.isFinite(expMs) || expMs <= 0) return;
+    if (!Number.isFinite(openedAt) || openedAt <= 0) return;
 
     const payload = {
       user_id: user.id,
@@ -313,6 +378,16 @@ export function TradeProvider({ children }) {
       expires_at: expMs,
     };
 
+    writeOpenTradesBackup(user.id, acc, [
+      ...activeTradesRef.current.filter((t) => normalizeAccountType(t?.account, acc) === acc && String(t?.tradeId ?? t?.id ?? "") !== tradeId),
+      {
+        ...openTradeNormalized,
+        openedAt,
+        expiresAt: expMs,
+        expirationTime: expMs,
+      },
+    ]);
+
     const { error } = await supabase.from("open_trades").upsert(payload, {
       onConflict: "user_id,trade_id",
     });
@@ -325,6 +400,12 @@ export function TradeProvider({ children }) {
     const id = String(tradeId || "");
     if (!id) return;
 
+    writeOpenTradesBackup(
+      user.id,
+      accountType,
+      activeTradesRef.current.filter((t) => String(t?.tradeId ?? t?.id ?? "") !== id)
+    );
+
     const { error } = await supabase
       .from("open_trades")
       .delete()
@@ -335,24 +416,26 @@ export function TradeProvider({ children }) {
   }
 
   const openLoadSeqRef = useRef(0);
-  const restoredPinsRef = useRef([]);
+  const restoredPinsRef = useRef(emptyPinsByAccount());
 
   const loadOpenTrades = useCallback(async (typeOverride) => {
     const uid = user?.id;
+    const acc = normalizeAccountType(typeOverride, accountType);
 
     try {
-      const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
+      const prevPins = Array.isArray(restoredPinsRef.current?.[acc]) ? restoredPinsRef.current[acc] : [];
       for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
     } catch {}
-    restoredPinsRef.current = [];
+    restoredPinsRef.current = {
+      ...(restoredPinsRef.current && typeof restoredPinsRef.current === "object" ? restoredPinsRef.current : emptyPinsByAccount()),
+      [acc]: [],
+    };
 
     if (!uid) {
-      setActiveTrades([]);
-      openIdsRef.current = new Set();
+      setActiveTrades((prev) => (Array.isArray(prev) ? prev.filter((t) => normalizeAccountType(t?.account, acc) !== acc) : []));
+      openIdsRef.current = new Set((activeTradesRef.current || []).filter((t) => normalizeAccountType(t?.account, acc) !== acc).map((t) => String(t?.id ?? t?.tradeId ?? "")).filter(Boolean));
       return;
     }
-
-    const acc = normalizeAccountType(typeOverride, accountType);
     const seq = ++openLoadSeqRef.current;
 
     try {
@@ -371,9 +454,18 @@ export function TradeProvider({ children }) {
       }
 
       const rows = Array.isArray(data) ? data : [];
-      const mappedAll = rows.map(mapOpenTradeRow).filter(Boolean);
+      const dbMapped = rows.map(mapOpenTradeRow).filter(Boolean);
+      const backupMapped = readOpenTradesBackup(uid, acc);
 
-      const now = Date.now();
+      const mergedMap = new Map();
+      for (const t of [...dbMapped, ...backupMapped]) {
+        const id = String(t?.tradeId ?? t?.id ?? "");
+        if (!id) continue;
+        mergedMap.set(id, t);
+      }
+      const mappedAll = Array.from(mergedMap.values()).sort((a, b) => Number(a?.expiresAt || 0) - Number(b?.expiresAt || 0));
+
+      const now = getServerNowMs();
       const stillOpen = [];
       const expiredIds = [];
 
@@ -393,6 +485,7 @@ export function TradeProvider({ children }) {
       }
 
       const mapped = stillOpen;
+      writeOpenTradesBackup(uid, acc, mapped);
 
       const pins = [];
       for (const t of mapped) {
@@ -403,24 +496,40 @@ export function TradeProvider({ children }) {
           pins.push({ symbol, timeframe: tf });
         }
       }
-      restoredPinsRef.current = pins;
+      restoredPinsRef.current = {
+        ...(restoredPinsRef.current && typeof restoredPinsRef.current === "object" ? restoredPinsRef.current : emptyPinsByAccount()),
+        [acc]: pins,
+      };
 
-      openIdsRef.current = new Set(mapped.map((t) => String(t.id)));
-      setActiveTrades(mapped);
+      setActiveTrades((prev) => {
+        const otherAccounts = (Array.isArray(prev) ? prev : []).filter(
+          (t) => normalizeAccountType(t?.account, acc) !== acc
+        );
+        const merged = [...otherAccounts, ...mapped].sort(
+          (a, b) => Number(a?.expiresAt || a?.expirationTime || 0) - Number(b?.expiresAt || b?.expirationTime || 0)
+        );
+        openIdsRef.current = new Set(merged.map((t) => String(t?.id ?? t?.tradeId ?? "")).filter(Boolean));
+        return merged;
+      });
 
-      for (const t of mapped) scheduleExpiration(t);
+      for (const t of mapped) {
+        try { engineRef.current?.restoreTrade?.(t); } catch {}
+        scheduleExpiration(t);
+      }
     } catch (e) {
       console.warn("[OpenTrades] load exception:", e?.message || e);
     }
-  }, [user?.id, accountType]);
+  }, [user?.id, accountType, getServerNowMs]);
 
   useEffect(() => {
     if (!user?.id) {
       try {
-        const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
-        for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
+        const allPins = restoredPinsRef.current && typeof restoredPinsRef.current === "object"
+          ? Object.values(restoredPinsRef.current).flat()
+          : [];
+        for (const p of allPins) safeUnpin(p.symbol, p.timeframe);
       } catch {}
-      restoredPinsRef.current = [];
+      restoredPinsRef.current = emptyPinsByAccount();
 
       setActiveTrades([]);
       openIdsRef.current = new Set();
@@ -612,7 +721,7 @@ export function TradeProvider({ children }) {
       normalizedClosed.closedAt ??
       normalizedClosed.expiresAt ??
       normalizedClosed.expirationTime ??
-      Date.now();
+      getServerNowMs();
 
     const timestamp = Number.isFinite(toMs(tsRaw)) ? toMs(tsRaw) : Date.now();
 
@@ -630,32 +739,32 @@ export function TradeProvider({ children }) {
       timestamp,
     };
 
-    for (const fnName of SETTLE_FUNCTION_CANDIDATES) {
-      try {
-        const { data, error } = await supabase.functions.invoke(fnName, { body: payload });
+    try {
+      const { data, error } = await supabase.functions.invoke(SETTLE_FUNCTION_NAME, {
+        body: payload,
+      });
 
-        if (error) {
-          console.warn(`[SETTLE][EDGE] ${fnName} invoke error:`, error);
-          continue;
-        }
-
-        if (data?.error) {
-          console.warn(`[SETTLE][EDGE] ${fnName} response error:`, data?.error, data);
-          continue;
-        }
-
-        if (data?.ok === true) {
-          console.log(`[SETTLE][EDGE] OK via ${fnName}`, data);
-          return true;
-        }
-
-        console.warn(`[SETTLE][EDGE] ${fnName} unexpected response:`, data);
-      } catch (e) {
-        console.warn(`[SETTLE][EDGE] ${fnName} exception:`, e?.message || e);
+      if (error) {
+        console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} invoke error:`, error);
+        return false;
       }
-    }
 
-    return false;
+      if (data?.error) {
+        console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} response error:`, data?.error, data);
+        return false;
+      }
+
+      if (data?.ok === true) {
+        console.log(`[SETTLE][EDGE] OK via ${SETTLE_FUNCTION_NAME}`, data);
+        return true;
+      }
+
+      console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} unexpected response:`, data);
+      return false;
+    } catch (e) {
+      console.warn(`[SETTLE][EDGE] ${SETTLE_FUNCTION_NAME} exception:`, e?.message || e);
+      return false;
+    }
   }
 
   function registerClosedTrade(trade) {
@@ -702,7 +811,7 @@ export function TradeProvider({ children }) {
       (Number.isFinite(toMs(trade?.closedAt)) ? toMs(trade?.closedAt) : NaN) ||
       (Number.isFinite(toMs(trade?.expirationTime)) ? toMs(trade?.expirationTime) : NaN) ||
       (Number.isFinite(toMs(trade?.expiresAt)) ? toMs(trade?.expiresAt) : NaN) ||
-      Date.now();
+      getServerNowMs();
 
     const normalizedClosed = {
       ...trade,
@@ -737,7 +846,7 @@ export function TradeProvider({ children }) {
       // sempre sincroniza com o soberano
       scheduleWalletSync();
       reload?.();
-      loadTradeHistory?.(accountType);
+      loadTradeHistory?.(closedAccount);
     });
 
     setLastResult(normalizedClosed);
@@ -774,7 +883,7 @@ export function TradeProvider({ children }) {
 
     registerClosedTrade({
       ...t,
-      closedAt: Date.now(),
+      closedAt: getServerNowMs(),
       closePrice: Number.isFinite(Number(closePrice)) ? Number(closePrice) : null,
       result,
       profit,
@@ -782,7 +891,7 @@ export function TradeProvider({ children }) {
   }, []);
 
   function scheduleExpiration(trade) {
-    const id = String(trade?.id ?? "");
+    const id = String(trade?.id ?? trade?.tradeId ?? "");
     if (!id) return;
 
     const expMs =
@@ -798,10 +907,26 @@ export function TradeProvider({ children }) {
       expireTimersRef.current.delete(id);
     }
 
-    const delay = Math.max(0, expMs - Date.now());
-    const timeoutId = setTimeout(() => finalizeTradeById(id), delay);
+    const tick = () => {
+      const stillOpen = activeTradesRef.current.some((t) => String(t?.id ?? t?.tradeId ?? "") === id);
+      if (!stillOpen) {
+        expireTimersRef.current.delete(id);
+        return;
+      }
 
-    expireTimersRef.current.set(id, timeoutId);
+      const remaining = expMs - getServerNowMs();
+      if (remaining <= 0) {
+        expireTimersRef.current.delete(id);
+        finalizeTradeById(id);
+        return;
+      }
+
+      const nextDelay = Math.max(80, Math.min(remaining, 1000));
+      const timeoutId = setTimeout(tick, nextDelay);
+      expireTimersRef.current.set(id, timeoutId);
+    };
+
+    tick();
   }
 
   // ✅ CRÍTICO: openTrade async e só abre se o débito confirmar
@@ -830,7 +955,7 @@ export function TradeProvider({ children }) {
       expiresAt: Number.isFinite(expMs) ? expMs : trade?.expiresAt,
       symbol: normalizePair(trade?.symbol ?? trade?.asset),
       timeframe: normalizeTf(trade?.timeframe || trade?.expirationLabel),
-      openedAt: Date.now(),
+      openedAt: getServerNowMs(),
     };
 
     const tradeAccount = normalized.account;
@@ -863,10 +988,15 @@ export function TradeProvider({ children }) {
     }
 
     openIdsRef.current.add(id);
-    setActiveTrades((prev) => [...prev, normalized]);
+    setActiveTrades((prev) => {
+      const next = [...prev, normalized];
+      writeOpenTradesBackup(user.id, tradeAccount, next.filter((t) => normalizeAccountType(t?.account, tradeAccount) === tradeAccount));
+      return next;
+    });
 
     if (normalized.symbol) safePin(normalized.symbol, normalized.timeframe);
 
+    try { engineRef.current?.restoreTrade?.(normalized); } catch {}
     persistOpenTradeToSupabase(normalized);
 
     scheduleWalletSync();
@@ -891,10 +1021,12 @@ export function TradeProvider({ children }) {
         }
 
         try {
-          const prevPins = Array.isArray(restoredPinsRef.current) ? restoredPinsRef.current : [];
-          for (const p of prevPins) safeUnpin(p.symbol, p.timeframe);
+          const allPins = restoredPinsRef.current && typeof restoredPinsRef.current === "object"
+            ? Object.values(restoredPinsRef.current).flat()
+            : [];
+          for (const p of allPins) safeUnpin(p.symbol, p.timeframe);
         } catch {}
-        restoredPinsRef.current = [];
+        restoredPinsRef.current = emptyPinsByAccount();
       } catch {}
     };
   }, []);

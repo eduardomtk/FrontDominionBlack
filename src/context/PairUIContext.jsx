@@ -99,6 +99,21 @@ export function PairUIProvider({ children }) {
   const [bootHydrated, setBootHydrated] = useState(false);
   const [floatingWarmReady, setFloatingWarmReady] = useState(false);
 
+  const persistPairUIState = (nextSymbol, nextTimeframe, nextFloatingPairs) => {
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          symbol: resolveBootSymbol(nextSymbol),
+          timeframe: normalizeTf(nextTimeframe || DEFAULT_TF),
+          activeFloatingPairs: Array.isArray(nextFloatingPairs)
+            ? nextFloatingPairs.map(normalizePair).filter(Boolean).slice(0, MAX_FLOATING_PAIRS)
+            : [],
+        })
+      );
+    } catch {}
+  };
+
   const refreshPairForChart = useMarketStore((s) => s.refreshPairForChart);
 
   const prevRef = useRef({ symbol: "", timeframe: DEFAULT_TF });
@@ -137,14 +152,7 @@ export function PairUIProvider({ children }) {
       _setTimeframe(nextTimeframe);
       setActiveFloatingPairs(nextFloatingPairs);
 
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({
-          symbol: nextSymbol,
-          timeframe: nextTimeframe,
-          activeFloatingPairs: nextFloatingPairs,
-        })
-      );
+      persistPairUIState(nextSymbol, nextTimeframe, nextFloatingPairs);
     } catch {
       _setSymbol(fallbackSymbol);
       _setTimeframe(DEFAULT_TF);
@@ -157,12 +165,7 @@ export function PairUIProvider({ children }) {
 
   useEffect(() => {
     if (!bootHydrated || !symbol) return;
-    try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ symbol, timeframe, activeFloatingPairs })
-      );
-    } catch {}
+    persistPairUIState(symbol, timeframe, activeFloatingPairs);
   }, [bootHydrated, symbol, timeframe, activeFloatingPairs, storageKey]);
 
   useEffect(() => {
@@ -213,16 +216,23 @@ export function PairUIProvider({ children }) {
 
   const addFloatingPair = (pair) => {
     const normalized = normalizePair(pair);
+    if (!normalized) return;
+
     setActiveFloatingPairs((prev) => {
       if (prev.includes(normalized)) return prev;
-      const next = [...prev, normalized];
-      return next.slice(-MAX_FLOATING_PAIRS);
+      const next = [...prev, normalized].slice(-MAX_FLOATING_PAIRS);
+      persistPairUIState(symbol, timeframe, next);
+      return next;
     });
   };
 
   const removeFloatingPair = (pair) => {
     const normalized = normalizePair(pair);
-    setActiveFloatingPairs((prev) => prev.filter((p) => p !== normalized));
+    setActiveFloatingPairs((prev) => {
+      const next = prev.filter((p) => p !== normalized);
+      persistPairUIState(symbol, timeframe, next);
+      return next;
+    });
   };
 
   const addFloatingPairFromSelector = (pair) => addFloatingPair(pair);
@@ -236,6 +246,10 @@ export function PairUIProvider({ children }) {
     const samePair = normalizePair(symbol) === normalized;
     const sameTf = normalizeTf(timeframe) === tf;
 
+    const nextFloating = activeFloatingPairs.includes(normalized)
+      ? activeFloatingPairs
+      : [...activeFloatingPairs, normalized].slice(-MAX_FLOATING_PAIRS);
+
     if (!samePair) {
       _setSymbol(normalized);
     }
@@ -243,7 +257,8 @@ export function PairUIProvider({ children }) {
       _setTimeframe(tf);
     }
 
-    addFloatingPair(normalized);
+    setActiveFloatingPairs(nextFloating);
+    persistPairUIState(normalized, tf, nextFloating);
     closePairPanel();
   };
 
@@ -257,8 +272,16 @@ export function PairUIProvider({ children }) {
       activePanel,
       activeFloatingPairs,
 
-      setSymbol: (s) => _setSymbol(resolveBootSymbol(s)),
-      setTimeframe: (tf) => _setTimeframe(normalizeTf(tf)),
+      setSymbol: (s) => {
+        const nextSymbol = resolveBootSymbol(s);
+        _setSymbol(nextSymbol);
+        persistPairUIState(nextSymbol, timeframe, activeFloatingPairs);
+      },
+      setTimeframe: (tf) => {
+        const nextTf = normalizeTf(tf);
+        _setTimeframe(nextTf);
+        persistPairUIState(symbol, nextTf, activeFloatingPairs);
+      },
       setPair: selectPair,
 
       togglePairPanelFromHeader,
