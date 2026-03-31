@@ -9,7 +9,6 @@ import { useMarketStore } from "@/stores/market.store";
 import ChartBridge from "./ChartBridge";
 import IndicatorLayer from "./indicatorLayer";
 import TradeLinesManager from "../TradeLines/TradeLinesManager";
-import { formatCompactAxisPrice } from "@/components/Chart/utils/priceAxisFormat";
 
 // ✅ SOBERANO: CrosshairStore alimentado direto do LWC
 import { CrosshairStore } from "@/components/Chart/Drawings/crosshair/CrosshairStore";
@@ -323,17 +322,28 @@ function isForexPriceSymbol(symbol) {
   return /^[A-Z]{6}$/.test(compact);
 }
 
-function buildPriceFormatForSymbol(symbol) {
-  if (isForexPriceSymbol(symbol)) {
-    return { type: "price", precision: 5, minMove: 0.00001 };
-  }
-  return { type: "price", precision: 3, minMove: 0.001 };
+function getIntegerDigitCount(price) {
+  const value = Math.abs(Number(price));
+  if (!Number.isFinite(value) || value < 1) return 1;
+  return Math.max(1, Math.floor(Math.log10(value)) + 1);
+}
+
+function getVisualPrecisionForPrice(symbol, price) {
+  if (isForexPriceSymbol(symbol)) return 5;
+  const integerDigits = getIntegerDigitCount(price);
+  return clampNumber(6 - integerDigits, 0, 5);
+}
+
+function buildPriceFormatForSymbol(symbol, price) {
+  const precision = getVisualPrecisionForPrice(symbol, price);
+  const minMove = precision > 0 ? Number(`1e-${precision}`) : 1;
+  return { type: "price", precision, minMove };
 }
 
 export default function MainChart({
   onChartReady,
   showTimeScale = true,
-  priceScaleMinWidth = 110,
+  priceScaleMinWidth = 64,
 
   backgroundUrl = null,
   backgroundOpacity = 0.10,
@@ -379,6 +389,14 @@ export default function MainChart({
     return Array.isArray(candles) ? candles.length : 0;
   });
   const pairHasLive = useMarketStore((state) => !!state.pairs?.[currentPairKey]?.liveCandle);
+  const pairLastPrice = useMarketStore((state) => {
+    const liveClose = Number(state.pairs?.[currentPairKey]?.liveCandle?.close);
+    if (Number.isFinite(liveClose)) return liveClose;
+
+    const candles = state.pairs?.[currentPairKey]?.candles;
+    const lastClose = Number(Array.isArray(candles) && candles.length ? candles[candles.length - 1]?.close : NaN);
+    return Number.isFinite(lastClose) ? lastClose : NaN;
+  });
 
   const bootSeedRef = useRef(null);
   const bootSeedKeyRef = useRef("");
@@ -455,7 +473,7 @@ export default function MainChart({
     return "candles";
   }, [chartType]);
 
-  const PRICE_FORMAT = useMemo(() => buildPriceFormatForSymbol(symbol), [symbol]);
+  const PRICE_FORMAT = useMemo(() => buildPriceFormatForSymbol(symbol, pairLastPrice), [symbol, pairLastPrice]);
 
   function applyBootVisualSeed(reason = "boot") {
     if (pairCandlesCount > 0 || pairHasLive) return false;
@@ -714,14 +732,17 @@ export default function MainChart({
         chart.applyOptions({
           width,
           height,
+          layout: {
+            background: { color: "rgba(0,0,0,0)" },
+            textColor: "#d9e2f1",
+            fontSize: 12,
+            fontFamily: "Inter, system-ui, sans-serif",
+          },
           rightPriceScale: {
             autoScale: allowAutoScale,
             visible: true,
             borderVisible: false,
             minimumWidth: priceScaleMinWidth,
-          },
-          localization: {
-            priceFormatter: (price) => formatCompactAxisPrice(price),
           },
           timeScale: {
             visible: Boolean(showTimeScale),
@@ -1379,12 +1400,7 @@ export default function MainChart({
     const chart = createChart(container, {
       width,
       height,
-      layout: {
-        background: { color: "rgba(0,0,0,0)" },
-        textColor: "#cbd5f5",
-        fontSize: 12,
-        fontFamily: "Inter, system-ui, sans-serif",
-      },
+      layout: { background: { color: "rgba(0,0,0,0)" }, textColor: "#d9e2f1", fontSize: 12, fontFamily: "Inter, system-ui, sans-serif" },
       grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
       timeScale: {
         visible: Boolean(showTimeScale),
@@ -1397,9 +1413,6 @@ export default function MainChart({
         minBarSpacing: 2.45,
       },
       rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth },
-      localization: {
-        priceFormatter: (price) => formatCompactAxisPrice(price),
-      },
       handleScroll: {
         mouseWheel: false,
         pressedMouseMove: true,
@@ -1566,6 +1579,12 @@ export default function MainChart({
     if (!chart) return;
     try {
       chart.applyOptions({
+        layout: {
+          background: { color: "rgba(0,0,0,0)" },
+          textColor: "#d9e2f1",
+          fontSize: 12,
+          fontFamily: "Inter, system-ui, sans-serif",
+        },
         timeScale: {
           visible: Boolean(showTimeScale),
           timeVisible: Boolean(showTimeScale),

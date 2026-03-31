@@ -3,7 +3,7 @@
 export const chartConfig = {
   layout: {
     background: { color: "#0b0f14" },
-    textColor: "#d1d4dc",
+    textColor: "#d9e2f1",
     fontSize: 12,
     fontFamily: "Inter, system-ui, sans-serif",
   },
@@ -18,7 +18,7 @@ export const chartConfig = {
 
     // ✅ FIX: manter o eixo com largura mínima fixa (igual panes)
     // evita “pular”/criar faixa de respiro ao adicionar indicadores/panes
-    minimumWidth: 84,
+    minimumWidth: 64,
   },
   timeScale: {
     timeVisible: true,

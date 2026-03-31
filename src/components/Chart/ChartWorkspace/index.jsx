@@ -34,7 +34,6 @@ import useDrawingsPersistence from "@/components/Chart/Drawings/persistence/useD
 import useIndicatorsPersistence from "@/components/Chart/Indicators/persistence/useIndicatorsPersistence";
 
 import { useTranslation } from "react-i18next";
-import { formatCompactAxisPrice } from "@/components/Chart/utils/priceAxisFormat";
 
 function normalizeTf(tf) {
   const s = String(tf || "").trim().toUpperCase();
@@ -79,8 +78,8 @@ function isForexSymbol(symbol) {
 }
 
 function getPriceScaleMinWidth(symbol) {
-  if (isForexSymbol(symbol)) return 84;
-  return 84;
+  if (isForexSymbol(symbol)) return 64;
+  return 64;
 }
 
 const PRICE_SCALE_RESET_EVENT = "__lwc_price_scale_reset__";
@@ -274,15 +273,30 @@ function getSeriesPrecision(series) {
   return 2;
 }
 
-function formatPriceForSeries(price, series) {
+function countIntegerDigits(price) {
+  const value = Math.abs(Number(price));
+  if (!Number.isFinite(value) || value < 1) return 1;
+  return Math.max(1, Math.floor(Math.log10(value)) + 1);
+}
+
+function trimPriceToSixDigits(price, precision) {
   const p = Number(price);
   if (!Number.isFinite(p)) return "";
 
-  const compact = formatCompactAxisPrice(p);
-  if (compact) return compact;
+  const safePrecision = clamp(Number.isFinite(precision) ? precision : 0, 0, 10);
+  const raw = p.toFixed(safePrecision);
+  const [intPart, decPart = ""] = raw.split(".");
+  const absIntPart = String(intPart).replace("-", "");
+  const maxDecimals = Math.max(0, 6 - Math.max(1, absIntPart.length || countIntegerDigits(p)));
+  const finalDecimals = Math.min(safePrecision, maxDecimals);
+  return p.toFixed(finalDecimals);
+}
 
+function formatPriceForSeries(price, series) {
+  const p = Number(price);
+  if (!Number.isFinite(p)) return "";
   const prec = getSeriesPrecision(series);
-  return p.toFixed(prec);
+  return trimPriceToSixDigits(p, prec);
 }
 
 function getCrosshairViewportState() {
@@ -1755,15 +1769,15 @@ function WorkspacePanes({
           const scaleStartInHost = rightEdgeInHost - scaleWidth;
 
           if (active.isMaster) {
-            const scalePad = 1;
-            const labelWidth = Math.max(28, Math.round(scaleWidth - scalePad * 2));
+            const scalePad = 0;
+            const labelWidth = Math.max(24, Math.round(scaleWidth - scalePad * 2));
             const labelLeft = scaleStartInHost + scalePad;
 
             priceLabelRef.current.style.width = `${labelWidth}px`;
             priceLabelRef.current.style.minWidth = `${labelWidth}px`;
             priceLabelRef.current.style.maxWidth = `${labelWidth}px`;
             priceLabelRef.current.style.left = `${Math.round(labelLeft)}px`;
-            priceLabelRef.current.style.padding = "2px 4px";
+            priceLabelRef.current.style.padding = "1px 4px";
             priceLabelRef.current.style.textAlign = "center";
             priceLabelRef.current.style.whiteSpace = "nowrap";
             priceLabelRef.current.style.display = "block";
@@ -1989,11 +2003,11 @@ function WorkspacePanes({
             position: "absolute",
             left: "-9999px",
             top: "-9999px",
-            padding: "2px 4px",
+            padding: "1px 4px",
             borderRadius: 2,
             fontSize: 12,
             fontWeight: 700,
-            lineHeight: "16px",
+            lineHeight: "15px",
             color: crosshairLabelColor,
             background: crosshairLabelBg,
             border: crosshairLabelBorder,
@@ -2004,7 +2018,8 @@ function WorkspacePanes({
             display: "none",
             pointerEvents: "none",
             userSelect: "none",
-            letterSpacing: "0.02em",
+            letterSpacing: "0.01em",
+            fontFamily: "Inter, system-ui, sans-serif",
           }}
         />
         <div
@@ -2013,11 +2028,11 @@ function WorkspacePanes({
             position: "absolute",
             left: "-9999px",
             top: "-9999px",
-            padding: "2px 4px",
+            padding: "2px 5px",
             borderRadius: 2,
             fontSize: 12,
             fontWeight: 700,
-            lineHeight: "16px",
+            lineHeight: "15px",
             color: crosshairLabelColor,
             background: crosshairLabelBg,
             border: crosshairLabelBorder,
@@ -2027,7 +2042,8 @@ function WorkspacePanes({
             display: "none",
             pointerEvents: "none",
             userSelect: "none",
-            letterSpacing: "0.02em",
+            letterSpacing: "0.01em",
+            fontFamily: "Inter, system-ui, sans-serif",
           }}
         />
       </div>
