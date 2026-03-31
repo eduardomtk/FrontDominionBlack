@@ -722,7 +722,7 @@ export default function MainChart({
             shiftVisibleRangeOnNewBar: false,
             fixLeftEdge: false,
             rightBarStaysOnScroll: true,
-            minBarSpacing: 2.45,
+            minBarSpacing: 1.4,
           },
           handleScroll: {
             mouseWheel: false,
@@ -746,7 +746,7 @@ export default function MainChart({
             shiftVisibleRangeOnNewBar: false,
             fixLeftEdge: false,
             rightBarStaysOnScroll: true,
-            minBarSpacing: 2.45,
+            minBarSpacing: 1.4,
           });
         } catch {}
       } catch {}
@@ -1383,7 +1383,7 @@ export default function MainChart({
         shiftVisibleRangeOnNewBar: false,
         fixLeftEdge: false,
         rightBarStaysOnScroll: true,
-        minBarSpacing: 2.45,
+        minBarSpacing: 1.4,
       },
       rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth },
       handleScroll: {
@@ -1409,7 +1409,7 @@ export default function MainChart({
       const ro = Number(o?.rightOffset);
       const bs = Number(o?.barSpacing);
 
-      const apply = { shiftVisibleRangeOnNewBar: false, fixLeftEdge: false, rightBarStaysOnScroll: true, minBarSpacing: 2.45 };
+      const apply = { shiftVisibleRangeOnNewBar: false, fixLeftEdge: false, rightBarStaysOnScroll: true, minBarSpacing: 1.4 };
 
       if (!Number.isFinite(ro) || ro < 1) apply.rightOffset = 15;
       if (!Number.isFinite(bs) || bs <= 0) apply.barSpacing = 10.5;
@@ -1563,7 +1563,7 @@ export default function MainChart({
           shiftVisibleRangeOnNewBar: false,
         fixLeftEdge: false,
         rightBarStaysOnScroll: true,
-        minBarSpacing: 2.45,
+        minBarSpacing: 1.4,
         },
         rightPriceScale: {
           autoScale: !manualPriceScaleRef.current,
