@@ -640,12 +640,12 @@ export default function MainChart({
     const st = overlayBufRef.current;
     const arr = Array.isArray(closed) ? closed : [];
     const perfWindow = buildPerformanceWindow(arr, live, chartRef.current, {
-      fallbackRecentBars: 1600,
-      leftWarmupBars: 420,
-      leftViewportBufferBars: 260,
-      rightViewportBufferBars: 160,
-      maxWindowBars: 3200,
-      minWindowBars: 1000,
+      fallbackRecentBars: 1300,
+      leftWarmupBars: 320,
+      leftViewportBufferBars: 180,
+      rightViewportBufferBars: 100,
+      maxWindowBars: 2200,
+      minWindowBars: 800,
     });
 
     const sig = calcClosedSig(perfWindow);

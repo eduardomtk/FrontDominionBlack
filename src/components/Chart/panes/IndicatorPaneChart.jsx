@@ -1150,11 +1150,11 @@ export default function IndicatorPaneChart({
       console.log(`[PANE_DATA_CLEAR:${paneType}] reason=${reason}`);
     };
 
-    const getCachedCalc = (inst, full) => {
+    const getCachedCalc = (inst, calcCandles) => {
       if (!inst) return null;
-      const key = `${paneType}|${getInstanceSignature(inst)}|${getFullSeriesSig(full)}`;
+      const key = `${paneType}|${getInstanceSignature(inst)}|${getFullSeriesSig(calcCandles)}`;
       if (calcCacheRef.current.has(key)) return calcCacheRef.current.get(key);
-      const res = calculateIndicatorSeries(inst, full);
+      const res = calculateIndicatorSeries(inst, calcCandles);
       calcCacheRef.current.clear();
       calcCacheRef.current.set(key, res);
       return res;
@@ -1163,15 +1163,17 @@ export default function IndicatorPaneChart({
     const flushBatch = () => {
       batchRafRef.current = 0;
       const { candles, liveCandle } = latestBatchRef.current || {};
-      const full = buildPerformanceWindow(candles, liveCandle, masterChart, {
-        fallbackRecentBars: 1500,
+      const full = buildFullCandleSeries(candles, liveCandle);
+      const calcWindow = buildPerformanceWindow(candles, liveCandle, masterChart, {
+        fallbackRecentBars: 1300,
         leftWarmupBars: 420,
-        leftViewportBufferBars: 240,
-        rightViewportBufferBars: 140,
-        maxWindowBars: 3000,
-        minWindowBars: 900,
+        leftViewportBufferBars: 160,
+        rightViewportBufferBars: 100,
+        maxWindowBars: 2200,
+        minWindowBars: 850,
       });
       const fullSig = getFullSeriesSig(full);
+      const calcSig = getFullSeriesSig(calcWindow);
 
       if (!full.length) {
         clearAllPaneSeries("empty_batch");
@@ -1238,8 +1240,8 @@ export default function IndicatorPaneChart({
               } catch {}
             }
 
-            const bgData = full.map((c) => ({ time: safeNum(c?.time), value: lv.upper })).filter((p) => Number.isFinite(p.time));
-            setSeriesDataSafe("__hlinesBg", bgSeries, bgData, `rsi-bg|${fullSig}|${levelSig}`);
+            const bgData = calcWindow.map((c) => ({ time: safeNum(c?.time), value: lv.upper })).filter((p) => Number.isFinite(p.time));
+            setSeriesDataSafe("__hlinesBg", bgSeries, bgData, `rsi-bg|${calcSig}|${levelSig}`);
           } else {
             if (bgStyleSigRef.current !== "rsi|disabled") {
               bgStyleSigRef.current = "rsi|disabled";
@@ -1269,10 +1271,10 @@ export default function IndicatorPaneChart({
         }
 
         if (rsiInst) {
-          const res = getCachedCalc(rsiInst, full);
+          const res = getCachedCalc(rsiInst, calcWindow);
           if (res?.kind === "line") {
-            const aligned = alignLineToCandles(full, Array.isArray(res.data) ? res.data : []);
-            setSeriesDataSafe("rsiLine", rsiLine, aligned, `rsi-line|${fullSig}|${levelSig}`);
+            const aligned = alignLineToCandles(calcWindow, Array.isArray(res.data) ? res.data : []);
+            setSeriesDataSafe("rsiLine", rsiLine, aligned, `rsi-line|${calcSig}|${levelSig}`);
           } else {
             setSeriesDataSafe("rsiLine", rsiLine, [], "rsi-line|empty");
           }
@@ -1332,8 +1334,8 @@ export default function IndicatorPaneChart({
               } catch {}
             }
 
-            const bgData = full.map((c) => ({ time: safeNum(c?.time), value: lv.upper })).filter((p) => Number.isFinite(p.time));
-            setSeriesDataSafe("__hlinesBg", bgSeries, bgData, `stoch-bg|${fullSig}|${levelSig}`);
+            const bgData = calcWindow.map((c) => ({ time: safeNum(c?.time), value: lv.upper })).filter((p) => Number.isFinite(p.time));
+            setSeriesDataSafe("__hlinesBg", bgSeries, bgData, `stoch-bg|${calcSig}|${levelSig}`);
           } else {
             if (bgStyleSigRef.current !== "stoch|disabled") {
               bgStyleSigRef.current = "stoch|disabled";
@@ -1363,12 +1365,12 @@ export default function IndicatorPaneChart({
         }
 
         if (stochInst) {
-          const res = getCachedCalc(stochInst, full);
+          const res = getCachedCalc(stochInst, calcWindow);
           if (res?.kind === "stoch") {
             const d = res.data || {};
-            const aligned = alignStochToCandles(full, Array.isArray(d.k) ? d.k : [], Array.isArray(d.d) ? d.d : []);
-            setSeriesDataSafe("stochK", stochK, aligned.k, `stoch-k|${fullSig}|${levelSig}`);
-            setSeriesDataSafe("stochD", stochD, aligned.d, `stoch-d|${fullSig}|${levelSig}`);
+            const aligned = alignStochToCandles(calcWindow, Array.isArray(d.k) ? d.k : [], Array.isArray(d.d) ? d.d : []);
+            setSeriesDataSafe("stochK", stochK, aligned.k, `stoch-k|${calcSig}|${levelSig}`);
+            setSeriesDataSafe("stochD", stochD, aligned.d, `stoch-d|${calcSig}|${levelSig}`);
           } else {
             setSeriesDataSafe("stochK", stochK, [], "stoch-k|empty");
             setSeriesDataSafe("stochD", stochD, [], "stoch-d|empty");
@@ -1389,17 +1391,17 @@ export default function IndicatorPaneChart({
           return;
         }
 
-        const res = getCachedCalc(inst, full);
+        const res = getCachedCalc(inst, calcWindow);
         if (res?.kind === "macd") {
           const d = res.data || {};
           const macd = Array.isArray(d.macd) ? d.macd : [];
           const sig = Array.isArray(d.signal) ? d.signal : [];
           const hist = Array.isArray(d.hist) ? d.hist : [];
 
-          setSeriesDataSafe("macdLine", seriesRefs.current.macdLine, alignLineToCandles(full, macd), `macd-line|${fullSig}`);
-          setSeriesDataSafe("sigLine", seriesRefs.current.sigLine, alignLineToCandles(full, sig), `macd-sig|${fullSig}`);
+          setSeriesDataSafe("macdLine", seriesRefs.current.macdLine, alignLineToCandles(calcWindow, macd), `macd-line|${calcSig}`);
+          setSeriesDataSafe("sigLine", seriesRefs.current.sigLine, alignLineToCandles(calcWindow, sig), `macd-sig|${calcSig}`);
 
-          const histAligned = alignHistogramToCandles(full, hist)
+          const histAligned = alignHistogramToCandles(calcWindow, hist)
             .map((p) => {
               const v = safeNum(p?.value);
               const t = safeNum(p?.time);
@@ -1409,7 +1411,7 @@ export default function IndicatorPaneChart({
             })
             .filter(Boolean);
 
-          setSeriesDataSafe("hist", seriesRefs.current.hist, histAligned, `macd-hist|${fullSig}`);
+          setSeriesDataSafe("hist", seriesRefs.current.hist, histAligned, `macd-hist|${calcSig}`);
         }
         return;
       }
@@ -1421,12 +1423,12 @@ export default function IndicatorPaneChart({
           return;
         }
 
-        const res = getCachedCalc(inst, full);
+        const res = getCachedCalc(inst, calcWindow);
         if (res?.kind === "volume") {
           const vol = Array.isArray(res.data) ? res.data : [];
 
           const byTimeClose = new Map();
-          for (const c of full) {
+          for (const c of calcWindow) {
             const t = safeNum(c?.time);
             const o = safeNum(c?.open);
             const cl = safeNum(c?.close);
@@ -1436,7 +1438,7 @@ export default function IndicatorPaneChart({
           }
 
           const volAligned = alignHistogramToCandles(
-            full,
+            calcWindow,
             vol.map((p) => ({ time: p?.time, value: p?.value }))
           );
 
@@ -1459,7 +1461,7 @@ export default function IndicatorPaneChart({
             })
             .filter(Boolean);
 
-          setSeriesDataSafe("vol", seriesRefs.current.vol, vdata, `vol|${fullSig}`);
+          setSeriesDataSafe("vol", seriesRefs.current.vol, vdata, `vol|${calcSig}`);
         }
         return;
       }
@@ -1473,9 +1475,9 @@ export default function IndicatorPaneChart({
           return;
         }
 
-        const res = getCachedCalc(inst, full);
+        const res = getCachedCalc(inst, calcWindow);
         if (res?.kind === "line") {
-          setSeriesDataSafe("line", line, alignLineToCandles(full, Array.isArray(res.data) ? res.data : []), `line|${paneType}|${fullSig}`);
+          setSeriesDataSafe("line", line, alignLineToCandles(calcWindow, Array.isArray(res.data) ? res.data : []), `line|${paneType}|${calcSig}`);
         } else {
           setSeriesDataSafe("line", line, [], `line|${paneType}|empty`);
         }
@@ -1495,16 +1497,16 @@ export default function IndicatorPaneChart({
           return;
         }
 
-        const res = getCachedCalc(inst, full);
+        const res = getCachedCalc(inst, calcWindow);
         if (res?.kind === "adx") {
           const d = res.data || {};
           const adx = Array.isArray(d.adx) ? d.adx : [];
           const plusDI = Array.isArray(d.plusDI) ? d.plusDI : [];
           const minusDI = Array.isArray(d.minusDI) ? d.minusDI : [];
 
-          setSeriesDataSafe("adxLine", adxLine, alignLineToCandles(full, adx), `adx|${fullSig}`);
-          setSeriesDataSafe("plusDiLine", plusDiLine, alignLineToCandles(full, plusDI), `+di|${fullSig}`);
-          setSeriesDataSafe("minusDiLine", minusDiLine, alignLineToCandles(full, minusDI), `-di|${fullSig}`);
+          setSeriesDataSafe("adxLine", adxLine, alignLineToCandles(calcWindow, adx), `adx|${calcSig}`);
+          setSeriesDataSafe("plusDiLine", plusDiLine, alignLineToCandles(calcWindow, plusDI), `+di|${calcSig}`);
+          setSeriesDataSafe("minusDiLine", minusDiLine, alignLineToCandles(calcWindow, minusDI), `-di|${calcSig}`);
         } else {
           setSeriesDataSafe("adxLine", adxLine, [], "adx|empty");
           setSeriesDataSafe("plusDiLine", plusDiLine, [], "+di|empty");
