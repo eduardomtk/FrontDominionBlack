@@ -79,7 +79,7 @@ function isForexSymbol(symbol) {
 
 function getPriceScaleMinWidth(symbol) {
   if (isForexSymbol(symbol)) return 72;
-  return 96;
+  return 84;
 }
 
 
@@ -1005,10 +1005,6 @@ function WorkspacePanes({
     const chart = masterChart;
     const ts = chart?.timeScale?.();
     if (!chart || !ts) return;
-
-    try {
-      masterContainer?.dispatchEvent?.(new CustomEvent("tp:scroll-to-realtime", { detail: { source: "workspace" } }));
-    } catch {}
 
     const resetState = realtimeResetRef.current;
     const token = resetState.token;
@@ -2054,6 +2050,9 @@ function WorkspacePanes({
                 visible={showScrollToRealtime}
                 onClick={() => {
                   SoundManager.uiClick?.();
+                  try {
+                    masterChartState?.resetPriceScaleToAuto?.();
+                  } catch {}
                   scrollToRealtime();
                 }}
               />

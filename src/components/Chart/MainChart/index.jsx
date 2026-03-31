@@ -182,7 +182,6 @@ class WatermarkPrimitive {
 }
 
 const HISTORY_RESET_EVENT = "__lwc_history_reset__";
-const SCROLL_TO_REALTIME_EVENT = "tp:scroll-to-realtime";
 
 function normalizeActiveSymbol(symbol) {
   return String(symbol || "").replace(/\//g, "").trim().toUpperCase();
@@ -192,6 +191,37 @@ function normalizeActiveTf(tf) {
   const s = String(tf || "M1").trim().toUpperCase();
   if (s === "M1" || s === "M5" || s === "M15" || s === "M30" || s === "H1") return s;
   return "M1";
+}
+
+function isForexLikeSymbol(symbol) {
+  const s = normalizeActiveSymbol(symbol);
+  return /^[A-Z]{6}$/.test(s);
+}
+
+function getPriceDisplayConfig(symbol) {
+  if (isForexLikeSymbol(symbol)) {
+    return {
+      precision: 4,
+      minMove: 0.0001,
+      priceScaleMinWidth: 72,
+      formatter: (value) => {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return "0.0000";
+        return n.toFixed(4);
+      },
+    };
+  }
+
+  return {
+    precision: 2,
+    minMove: 0.01,
+    priceScaleMinWidth: 84,
+    formatter: (value) => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "0.00";
+      return n.toFixed(2);
+    },
+  };
 }
 
 const BOOT_SNAPSHOT_CACHE_VERSION = "v6";
@@ -396,6 +426,15 @@ export default function MainChart({
   });
 
   const manualPriceScaleRef = useRef(false);
+  const manualPriceScaleModeRef = useRef("native");
+  const manualPriceRangeRef = useRef(null);
+  const mobileAxisGestureRef = useRef({
+    active: false,
+    startY: 0,
+    startRange: null,
+    anchorRatio: 0.5,
+    anchorPrice: null,
+  });
   const lastEngineObjRef = useRef(null);
 
   // ✅ soberano: epoch de reset de histórico (somente para "hard reset", NÃO em cada candle close)
@@ -441,7 +480,11 @@ export default function MainChart({
     return "candles";
   }, [chartType]);
 
-  const PRICE_FORMAT = useMemo(() => ({ type: "price", precision: 5, minMove: 0.00001 }), []);
+  const priceDisplayConfig = useMemo(() => getPriceDisplayConfig(symbol), [symbol]);
+  const PRICE_FORMAT = useMemo(
+    () => ({ type: "price", precision: priceDisplayConfig.precision, minMove: priceDisplayConfig.minMove }),
+    [priceDisplayConfig]
+  );
 
   function applyBootVisualSeed(reason = "boot") {
     if (pairCandlesCount > 0 || pairHasLive) return false;
@@ -683,67 +726,28 @@ export default function MainChart({
     return buf;
   }
 
-  function restoreAutoScrollAndPriceScale({ hard = false } = {}) {
-    manualPriceScaleRef.current = false;
-
-    const chart = chartRef.current;
-    if (!chart) return;
-
-    try {
-      chart.applyOptions({
-        rightPriceScale: {
-          autoScale: true,
-          visible: true,
-          borderVisible: false,
-          minimumWidth: priceScaleMinWidth,
-        },
-        handleScale: {
-          mouseWheel: false,
-          pinch: true,
-          axisPressedMouseMove: { time: true, price: true },
-        },
-      });
-    } catch {}
-
-    try {
-      chart.priceScale?.("right")?.applyOptions?.({ autoScale: true });
-    } catch {}
-
-    try {
-      chart.timeScale?.()?.applyOptions?.({
-        rightOffset: INITIAL_RIGHT_OFFSET,
-        rightBarStaysOnScroll: true,
-        shiftVisibleRangeOnNewBar: false,
-      });
-    } catch {}
-
-    if (hard) {
-      const closed = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current : [];
-      const live = lastLiveCandleRef.current;
-      const range = calcInitialVisibleLogicalRange(closed.length, !!live);
-      if (range) {
-        try {
-          chart.timeScale?.()?.setVisibleLogicalRange?.(range);
-        } catch {}
-      }
-    }
-
-    forceChartScaleRecovery({ resetPriceScale: true });
-  }
-
   function forceChartScaleRecovery({ resetPriceScale = false } = {}) {
     const chart = chartRef.current;
     const container = containerRef.current;
     if (!chart || !container) return;
 
-    if (resetPriceScale) manualPriceScaleRef.current = false;
+    if (resetPriceScale) {
+      manualPriceScaleRef.current = false;
+      manualPriceScaleModeRef.current = "native";
+      manualPriceRangeRef.current = null;
+      try {
+        seriesRef.current?.applyOptions?.({ autoscaleInfoProvider: undefined });
+      } catch {}
+    }
 
     const run = () => {
       try {
         const rect = container.getBoundingClientRect();
         const width = Math.max(1, Math.floor(rect.width));
         const height = Math.max(1, Math.floor(rect.height));
-        const allowAutoScale = !manualPriceScaleRef.current;
+        const allowAutoScale = manualPriceScaleRef.current
+          ? manualPriceScaleModeRef.current === "provider"
+          : true;
 
         chart.applyOptions({
           width,
@@ -802,6 +806,85 @@ export default function MainChart({
         });
       });
     } catch {}
+  }
+
+  function getVisiblePriceRangeFromSeries() {
+    const series = seriesRef.current;
+    const container = containerRef.current;
+    if (!series || !container) return null;
+
+    const rect = container.getBoundingClientRect();
+    const topPrice = Number(series.coordinateToPrice?.(0));
+    const bottomPrice = Number(series.coordinateToPrice?.(Math.max(1, rect.height)));
+    if (!Number.isFinite(topPrice) || !Number.isFinite(bottomPrice) || topPrice === bottomPrice) return null;
+
+    return {
+      min: Math.min(topPrice, bottomPrice),
+      max: Math.max(topPrice, bottomPrice),
+      height: Math.max(1, rect.height),
+    };
+  }
+
+  function applyManualPriceRange(range) {
+    const series = seriesRef.current;
+    const chart = chartRef.current;
+    if (!series || !chart || !range) return;
+
+    const min = Number(range?.min);
+    const max = Number(range?.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return;
+
+    manualPriceScaleRef.current = true;
+    manualPriceScaleModeRef.current = "provider";
+    manualPriceRangeRef.current = { min, max };
+
+    try {
+      series.applyOptions({
+        autoscaleInfoProvider: () => ({
+          priceRange: {
+            minValue: min,
+            maxValue: max,
+          },
+        }),
+      });
+    } catch {}
+
+    try {
+      chart.applyOptions({
+        rightPriceScale: {
+          autoScale: true,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+        },
+      });
+    } catch {}
+  }
+
+  function resetPriceScaleToAuto() {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+
+    manualPriceScaleRef.current = false;
+    manualPriceScaleModeRef.current = "native";
+    manualPriceRangeRef.current = null;
+
+    try {
+      series?.applyOptions?.({ autoscaleInfoProvider: undefined });
+    } catch {}
+
+    try {
+      chart?.applyOptions?.({
+        rightPriceScale: {
+          autoScale: true,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+        },
+      });
+    } catch {}
+
+    forceChartScaleRecovery({ resetPriceScale: true });
   }
 
   function scheduleOverlayApply(closed, live) {
@@ -1412,6 +1495,9 @@ export default function MainChart({
       height,
       layout: { background: { color: "rgba(0,0,0,0)" }, textColor: "#cbd5f5" },
       grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
+      localization: {
+        priceFormatter: priceDisplayConfig.formatter,
+      },
       timeScale: {
         visible: Boolean(showTimeScale),
         timeVisible: Boolean(showTimeScale),
@@ -1481,7 +1567,13 @@ export default function MainChart({
     applyBootVisualSeed("chart_init");
 
     if (typeof onChartReadyRef.current === "function") {
-      onChartReadyRef.current({ chart, container, series, getSeries: () => seriesRef.current });
+      onChartReadyRef.current({
+        chart,
+        container,
+        series,
+        getSeries: () => seriesRef.current,
+        resetPriceScaleToAuto,
+      });
     }
 
     const ro = new ResizeObserver((entries) => {
@@ -1578,6 +1670,31 @@ export default function MainChart({
 
   useEffect(() => {
     const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series) return;
+
+    try {
+      chart.applyOptions({
+        localization: {
+          priceFormatter: priceDisplayConfig.formatter,
+        },
+        rightPriceScale: {
+          minimumWidth: priceScaleMinWidth,
+        },
+      });
+    } catch {}
+
+    try {
+      series.applyOptions({
+        priceFormat: PRICE_FORMAT,
+      });
+    } catch {}
+
+    forceChartScaleRecovery();
+  }, [PRICE_FORMAT, priceDisplayConfig, priceScaleMinWidth]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
     if (!chart) return;
     try {
       chart.applyOptions({
@@ -1592,7 +1709,9 @@ export default function MainChart({
         minBarSpacing: 2.45,
         },
         rightPriceScale: {
-          autoScale: !manualPriceScaleRef.current,
+          autoScale: manualPriceScaleRef.current
+            ? manualPriceScaleModeRef.current === "provider"
+            : true,
           visible: true,
           borderVisible: false,
           minimumWidth: priceScaleMinWidth,
@@ -1623,27 +1742,22 @@ export default function MainChart({
     const container = containerRef.current;
     if (!chart || !container) return;
 
-    const touchAxisState = { active: false, startY: 0, startRange: null };
-
-    const isRightScaleHit = (clientX) => {
+    const markManualPriceScale = (clientX) => {
       const host = containerRef.current;
       const chartApi = chartRef.current;
-      if (!host || !chartApi) return false;
+      if (!host || !chartApi) return;
 
       const rect = host.getBoundingClientRect();
       const x = Number(clientX) - rect.left;
-      if (!Number.isFinite(x)) return false;
+      if (!Number.isFinite(x)) return;
 
       const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
       const startX = Math.max(0, rect.width - rightScaleWidth - 8);
-      return x >= startX;
-    };
-
-    const markManualPriceScale = (clientX) => {
-      const chartApi = chartRef.current;
-      if (!chartApi || !isRightScaleHit(clientX)) return false;
+      if (x < startX) return;
 
       manualPriceScaleRef.current = true;
+      manualPriceScaleModeRef.current = "native";
+      manualPriceRangeRef.current = null;
 
       try {
         chartApi.applyOptions({
@@ -1660,100 +1774,105 @@ export default function MainChart({
           },
         });
       } catch {}
-
-      try {
-        chartApi.priceScale?.("right")?.applyOptions?.({ autoScale: false });
-      } catch {}
-
-      return true;
     };
 
-    const onMouseDown = (event) => {
-      markManualPriceScale(event.clientX);
-    };
-
+    const onMouseDown = (event) => markManualPriceScale(event.clientX);
     const onTouchStart = (event) => {
       const touch = event?.touches?.[0];
       if (!touch) return;
 
-      const activated = markManualPriceScale(touch.clientX);
-      if (!activated) return;
+      markManualPriceScale(touch.clientX);
 
-      const ps = chartRef.current?.priceScale?.("right");
-      const vr = ps?.getVisibleRange?.();
-      const from = Number(vr?.from);
-      const to = Number(vr?.to);
-      if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
+      const isMobilePortrait = window.innerWidth <= 767 && window.innerHeight >= window.innerWidth;
+      if (!isMobilePortrait) return;
 
-      touchAxisState.active = true;
-      touchAxisState.startY = Number(touch.clientY) || 0;
-      touchAxisState.startRange = { from, to };
+      const host = containerRef.current;
+      const chartApi = chartRef.current;
+      const series = seriesRef.current;
+      if (!host || !chartApi || !series) return;
+
+      const rect = host.getBoundingClientRect();
+      const x = Number(touch.clientX) - rect.left;
+      const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
+      const startX = Math.max(0, rect.width - rightScaleWidth - 10);
+      if (!Number.isFinite(x) || x < startX) return;
+
+      const visibleRange = getVisiblePriceRangeFromSeries();
+      if (!visibleRange) return;
+
+      const localY = clampNumber(Number(touch.clientY) - rect.top, 0, visibleRange.height);
+      const anchorPriceRaw = Number(series.coordinateToPrice?.(localY));
+      const span = Math.max(1e-8, visibleRange.max - visibleRange.min);
+      const anchorRatio = Number.isFinite(anchorPriceRaw)
+        ? clampNumber((anchorPriceRaw - visibleRange.min) / span, 0, 1)
+        : 0.5;
+
+      mobileAxisGestureRef.current = {
+        active: true,
+        startY: Number(touch.clientY),
+        startRange: { min: visibleRange.min, max: visibleRange.max, span },
+        anchorRatio,
+        anchorPrice: Number.isFinite(anchorPriceRaw)
+          ? anchorPriceRaw
+          : (visibleRange.min + (span * anchorRatio)),
+      };
 
       try {
         event.preventDefault?.();
+        event.stopPropagation?.();
       } catch {}
     };
 
     const onTouchMove = (event) => {
-      if (!touchAxisState.active) return;
+      const state = mobileAxisGestureRef.current;
+      if (!state?.active) return;
 
       const touch = event?.touches?.[0];
-      const ps = chartRef.current?.priceScale?.("right");
-      if (!touch || !ps?.setVisibleRange || !touchAxisState.startRange) return;
+      if (!touch) return;
 
-      const deltaY = Number(touch.clientY) - Number(touchAxisState.startY || 0);
-      if (!Number.isFinite(deltaY)) return;
+      const startRange = state.startRange;
+      if (!startRange) return;
 
-      const startRange = touchAxisState.startRange;
-      const span = Number(startRange.to) - Number(startRange.from);
-      if (!Number.isFinite(span) || span <= 0) return;
+      const dy = Number(touch.clientY) - Number(state.startY || 0);
+      const scaleFactor = Math.exp(dy * 0.0045);
+      const nextSpan = Math.max(1e-8, Number(startRange.span) * scaleFactor);
+      const anchorRatio = clampNumber(Number(state.anchorRatio), 0, 1);
+      const anchorPrice = Number(state.anchorPrice);
+      const nextMin = anchorPrice - (nextSpan * anchorRatio);
+      const nextMax = nextMin + nextSpan;
 
-      const factor = Math.exp(deltaY * 0.0055);
-      const center = (Number(startRange.from) + Number(startRange.to)) / 2;
-      const nextSpan = clampNumber(span * factor, span * 0.15, span * 20);
-      const nextRange = {
-        from: center - nextSpan / 2,
-        to: center + nextSpan / 2,
-      };
+      applyManualPriceRange({ min: nextMin, max: nextMax });
 
       try {
-        ps.setVisibleRange(nextRange);
         event.preventDefault?.();
+        event.stopPropagation?.();
       } catch {}
     };
 
-    const endTouchAxis = () => {
-      touchAxisState.active = false;
-      touchAxisState.startRange = null;
+    const endTouchAxisGesture = () => {
+      mobileAxisGestureRef.current = {
+        active: false,
+        startY: 0,
+        startRange: null,
+        anchorRatio: 0.5,
+        anchorPrice: null,
+      };
     };
-
-    const onScrollToRealtime = () => {
-      restoreAutoScrollAndPriceScale({ hard: true });
-    };
-
-    try {
-      container.style.touchAction = "none";
-    } catch {}
 
     container.addEventListener("mousedown", onMouseDown, true);
     container.addEventListener("touchstart", onTouchStart, { capture: true, passive: false });
-    container.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
-    container.addEventListener("touchend", endTouchAxis, true);
-    container.addEventListener("touchcancel", endTouchAxis, true);
-    container.addEventListener(SCROLL_TO_REALTIME_EVENT, onScrollToRealtime);
+    window.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
+    window.addEventListener("touchend", endTouchAxisGesture, true);
+    window.addEventListener("touchcancel", endTouchAxisGesture, true);
 
     return () => {
-      try {
-        container.style.touchAction = "";
-      } catch {}
       container.removeEventListener("mousedown", onMouseDown, true);
       container.removeEventListener("touchstart", onTouchStart, true);
-      container.removeEventListener("touchmove", onTouchMove, true);
-      container.removeEventListener("touchend", endTouchAxis, true);
-      container.removeEventListener("touchcancel", endTouchAxis, true);
-      container.removeEventListener(SCROLL_TO_REALTIME_EVENT, onScrollToRealtime);
+      window.removeEventListener("touchmove", onTouchMove, true);
+      window.removeEventListener("touchend", endTouchAxisGesture, true);
+      window.removeEventListener("touchcancel", endTouchAxisGesture, true);
     };
-  }, [priceScaleMinWidth, currentPairKey, type]);
+  }, [priceScaleMinWidth]);
 
   useEffect(() => {
     manualPriceScaleRef.current = false;
