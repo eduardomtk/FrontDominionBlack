@@ -13,6 +13,7 @@ const HISTORY_LIMIT = 1000;
 const _historySessionIdByKey = Object.create(null); // key -> number
 const _historyBufferByKey = Object.create(null); // key -> candles[]
 const _historyCommitTimerByKey = Object.create(null); // key -> timeout
+const _historyLoadMoreRequestByKey = Object.create(null); // key -> { fromTime, sentAt }
 const HISTORY_COMMIT_QUIET_MS = 60;
 const ORPHAN_KEEPALIVE_MS = 0;
 const _orphanCloseTimerByKey = Object.create(null);
@@ -530,7 +531,7 @@ function scheduleHistoryCommit({ key, sessionId, set, get }) {
               ? Math.max(Number(current._lastHistoryTime || 0), nextLastT)
               : Number(current._lastHistoryTime || 0),
             _historySessionId: Number(sessionId || 0),
-            _historyLoadMorePending: false,
+            _historyLoadMorePending: Boolean(current._historyLoadMorePending),
             _hotTouchedAt: Date.now(),
           },
         },
@@ -857,7 +858,7 @@ export const useMarketStore = create((set, get) => {
             _lastHistoryTime: Math.max(Number(current._lastHistoryTime || 0), Number(snapshot.lastHistoryTime || 0)),
             _lastLiveTime: Math.max(Number(current._lastLiveTime || 0), Number(snapshot.lastLiveTime || 0)),
             _historySessionId: Number(current._historySessionId || _historySessionIdByKey[key] || 0),
-            _historyLoadMorePending: false,
+            _historyLoadMorePending: Boolean(current._historyLoadMorePending),
             _lastIncomingHistorySig: incomingSig || current._lastIncomingHistorySig || "",
             archiveStatus: snapshot.archiveStatus || current.archiveStatus || null,
             hasMoreHistory: snapshot.hasMore !== false,
@@ -975,6 +976,8 @@ export const useMarketStore = create((set, get) => {
             _hotTouchedAt: Date.now(),
           };
 
+          delete _historyLoadMoreRequestByKey[key];
+
           persistHistorySnapshot(key, nextPair.candles, nextPair.liveCandle, {
             timeframe: nextPair.timeframe,
             timeframeSec: nextPair.timeframeSec,
@@ -1047,7 +1050,7 @@ export const useMarketStore = create((set, get) => {
             isLoadingHistory: true,
             _lastHistoryTime: Math.max(lastHist, t),
             _historySessionId: sess,
-            _historyLoadMorePending: false,
+            _historyLoadMorePending: Boolean(current._historyLoadMorePending),
             _hotTouchedAt: Date.now(),
           };
 
@@ -1138,14 +1141,32 @@ export const useMarketStore = create((set, get) => {
 
       const current = get().pairs?.[key];
       if (!current) return;
-      if (current._historyLoadMorePending) return;
       if (current.hasMoreHistory === false) return;
 
       const oldestTime = Number(current.candles?.[0]?.time || 0);
       const beforeTime = Number(fromTime) || oldestTime;
       if (!Number.isFinite(beforeTime) || beforeTime <= 0) return;
 
+      const inflight = _historyLoadMoreRequestByKey[key];
+      const inflightFromTime = Number(inflight?.fromTime || 0);
+      const inflightSentAt = Number(inflight?.sentAt || 0);
+      const now = Date.now();
+
+      if (current._historyLoadMorePending) {
+        if (inflightFromTime === beforeTime) return;
+        if (inflightSentAt > 0 && now - inflightSentAt < 1500) return;
+      }
+
+      if (inflightFromTime === beforeTime && inflightSentAt > 0 && now - inflightSentAt < 1500) {
+        return;
+      }
+
       const limit = tf === "M1" || tf === "M5" ? 500 : 400;
+
+      _historyLoadMoreRequestByKey[key] = {
+        fromTime: beforeTime,
+        sentAt: now,
+      };
 
       set((state) => {
         const pairState = state.pairs?.[key];
@@ -1184,6 +1205,7 @@ export const useMarketStore = create((set, get) => {
       delete _historyCommitTimerByKey[key];
       delete _historyBufferByKey[key];
       delete _historySessionIdByKey[key];
+      delete _historyLoadMoreRequestByKey[key];
       clearPostHydrationResyncTimers(key);
   
       set((state) => {
@@ -1273,6 +1295,7 @@ export const useMarketStore = create((set, get) => {
       delete _historyCommitTimerByKey[key];
       delete _historyBufferByKey[key];
       delete _historySessionIdByKey[key];
+      delete _historyLoadMoreRequestByKey[key];
       clearPostHydrationResyncTimers(key);
       clearOrphanCloseTimer(key);
 
