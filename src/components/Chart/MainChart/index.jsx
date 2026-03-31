@@ -193,37 +193,6 @@ function normalizeActiveTf(tf) {
   return "M1";
 }
 
-function isForexLikeSymbol(symbol) {
-  const s = normalizeActiveSymbol(symbol);
-  return /^[A-Z]{6}$/.test(s);
-}
-
-function getPriceDisplayConfig(symbol) {
-  if (isForexLikeSymbol(symbol)) {
-    return {
-      precision: 4,
-      minMove: 0.0001,
-      priceScaleMinWidth: 72,
-      formatter: (value) => {
-        const n = Number(value);
-        if (!Number.isFinite(n)) return "0.0000";
-        return n.toFixed(4);
-      },
-    };
-  }
-
-  return {
-    precision: 2,
-    minMove: 0.01,
-    priceScaleMinWidth: 84,
-    formatter: (value) => {
-      const n = Number(value);
-      if (!Number.isFinite(n)) return "0.00";
-      return n.toFixed(2);
-    },
-  };
-}
-
 const BOOT_SNAPSHOT_CACHE_VERSION = "v6";
 const BOOT_SNAPSHOT_CACHE_TTL_MS = 75 * 1000;
 const BOOT_SNAPSHOT_MAX_CANDLES = 500;
@@ -346,6 +315,19 @@ function getRightPriceScaleWidth(chart, fallback = 110) {
   return Number.isFinite(fb) && fb > 0 ? fb : 110;
 }
 
+function isForexLikeSymbol(symbol) {
+  const s = String(symbol || "").toUpperCase().trim();
+  const pair = s.includes("/") ? s.replace("/", "") : s;
+  return /^[A-Z]{6}$/.test(pair);
+}
+
+function getPriceFormatForSymbol(symbol) {
+  if (isForexLikeSymbol(symbol)) {
+    return { type: "price", precision: 4, minMove: 0.0001 };
+  }
+  return { type: "price", precision: 2, minMove: 0.01 };
+}
+
 export default function MainChart({
   onChartReady,
   showTimeScale = true,
@@ -401,6 +383,7 @@ export default function MainChart({
 
   const lbDataRef = useRef({ seeded: false, lastClosedTime: null, lastClosedCount: 0, firstClosedTime: null });
   const lbPendingLiveRef = useRef(null);
+  const activePriceScaleTouchRef = useRef({ active: false, identifier: null });
 
   const lastMarkerRef = useRef({ time: null, price: null });
 
@@ -426,15 +409,6 @@ export default function MainChart({
   });
 
   const manualPriceScaleRef = useRef(false);
-  const manualPriceScaleModeRef = useRef("native");
-  const manualPriceRangeRef = useRef(null);
-  const mobileAxisGestureRef = useRef({
-    active: false,
-    startY: 0,
-    startRange: null,
-    anchorRatio: 0.5,
-    anchorPrice: null,
-  });
   const lastEngineObjRef = useRef(null);
 
   // ✅ soberano: epoch de reset de histórico (somente para "hard reset", NÃO em cada candle close)
@@ -480,11 +454,7 @@ export default function MainChart({
     return "candles";
   }, [chartType]);
 
-  const priceDisplayConfig = useMemo(() => getPriceDisplayConfig(symbol), [symbol]);
-  const PRICE_FORMAT = useMemo(
-    () => ({ type: "price", precision: priceDisplayConfig.precision, minMove: priceDisplayConfig.minMove }),
-    [priceDisplayConfig]
-  );
+  const PRICE_FORMAT = useMemo(() => getPriceFormatForSymbol(symbol), [symbol]);
 
   function applyBootVisualSeed(reason = "boot") {
     if (pairCandlesCount > 0 || pairHasLive) return false;
@@ -731,23 +701,14 @@ export default function MainChart({
     const container = containerRef.current;
     if (!chart || !container) return;
 
-    if (resetPriceScale) {
-      manualPriceScaleRef.current = false;
-      manualPriceScaleModeRef.current = "native";
-      manualPriceRangeRef.current = null;
-      try {
-        seriesRef.current?.applyOptions?.({ autoscaleInfoProvider: undefined });
-      } catch {}
-    }
+    if (resetPriceScale) manualPriceScaleRef.current = false;
 
     const run = () => {
       try {
         const rect = container.getBoundingClientRect();
         const width = Math.max(1, Math.floor(rect.width));
         const height = Math.max(1, Math.floor(rect.height));
-        const allowAutoScale = manualPriceScaleRef.current
-          ? manualPriceScaleModeRef.current === "provider"
-          : true;
+        const allowAutoScale = !manualPriceScaleRef.current;
 
         chart.applyOptions({
           width,
@@ -772,7 +733,7 @@ export default function MainChart({
             mouseWheel: false,
             pressedMouseMove: true,
             horzTouchDrag: true,
-            vertTouchDrag: false,
+            vertTouchDrag: !!manualPriceScaleRef.current,
           },
           handleScale: {
             mouseWheel: false,
@@ -806,85 +767,6 @@ export default function MainChart({
         });
       });
     } catch {}
-  }
-
-  function getVisiblePriceRangeFromSeries() {
-    const series = seriesRef.current;
-    const container = containerRef.current;
-    if (!series || !container) return null;
-
-    const rect = container.getBoundingClientRect();
-    const topPrice = Number(series.coordinateToPrice?.(0));
-    const bottomPrice = Number(series.coordinateToPrice?.(Math.max(1, rect.height)));
-    if (!Number.isFinite(topPrice) || !Number.isFinite(bottomPrice) || topPrice === bottomPrice) return null;
-
-    return {
-      min: Math.min(topPrice, bottomPrice),
-      max: Math.max(topPrice, bottomPrice),
-      height: Math.max(1, rect.height),
-    };
-  }
-
-  function applyManualPriceRange(range) {
-    const series = seriesRef.current;
-    const chart = chartRef.current;
-    if (!series || !chart || !range) return;
-
-    const min = Number(range?.min);
-    const max = Number(range?.max);
-    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return;
-
-    manualPriceScaleRef.current = true;
-    manualPriceScaleModeRef.current = "provider";
-    manualPriceRangeRef.current = { min, max };
-
-    try {
-      series.applyOptions({
-        autoscaleInfoProvider: () => ({
-          priceRange: {
-            minValue: min,
-            maxValue: max,
-          },
-        }),
-      });
-    } catch {}
-
-    try {
-      chart.applyOptions({
-        rightPriceScale: {
-          autoScale: true,
-          visible: true,
-          borderVisible: false,
-          minimumWidth: priceScaleMinWidth,
-        },
-      });
-    } catch {}
-  }
-
-  function resetPriceScaleToAuto() {
-    const chart = chartRef.current;
-    const series = seriesRef.current;
-
-    manualPriceScaleRef.current = false;
-    manualPriceScaleModeRef.current = "native";
-    manualPriceRangeRef.current = null;
-
-    try {
-      series?.applyOptions?.({ autoscaleInfoProvider: undefined });
-    } catch {}
-
-    try {
-      chart?.applyOptions?.({
-        rightPriceScale: {
-          autoScale: true,
-          visible: true,
-          borderVisible: false,
-          minimumWidth: priceScaleMinWidth,
-        },
-      });
-    } catch {}
-
-    forceChartScaleRecovery({ resetPriceScale: true });
   }
 
   function scheduleOverlayApply(closed, live) {
@@ -1495,9 +1377,6 @@ export default function MainChart({
       height,
       layout: { background: { color: "rgba(0,0,0,0)" }, textColor: "#cbd5f5" },
       grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
-      localization: {
-        priceFormatter: priceDisplayConfig.formatter,
-      },
       timeScale: {
         visible: Boolean(showTimeScale),
         timeVisible: Boolean(showTimeScale),
@@ -1508,12 +1387,12 @@ export default function MainChart({
         rightBarStaysOnScroll: true,
         minBarSpacing: 2.45,
       },
-      rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth },
+      rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth, scaleMargins: { top: 0.10, bottom: 0.10 } },
       handleScroll: {
         mouseWheel: false,
         pressedMouseMove: true,
         horzTouchDrag: true,
-        vertTouchDrag: false,
+        vertTouchDrag: !!manualPriceScaleRef.current,
       },
       handleScale: {
         mouseWheel: false,
@@ -1567,13 +1446,7 @@ export default function MainChart({
     applyBootVisualSeed("chart_init");
 
     if (typeof onChartReadyRef.current === "function") {
-      onChartReadyRef.current({
-        chart,
-        container,
-        series,
-        getSeries: () => seriesRef.current,
-        resetPriceScaleToAuto,
-      });
+      onChartReadyRef.current({ chart, container, series, getSeries: () => seriesRef.current, resetPriceScaleMode, setManualPriceScaleMode, isManualPriceScaleActive: () => !!manualPriceScaleRef.current });
     }
 
     const ro = new ResizeObserver((entries) => {
@@ -1670,31 +1543,6 @@ export default function MainChart({
 
   useEffect(() => {
     const chart = chartRef.current;
-    const series = seriesRef.current;
-    if (!chart || !series) return;
-
-    try {
-      chart.applyOptions({
-        localization: {
-          priceFormatter: priceDisplayConfig.formatter,
-        },
-        rightPriceScale: {
-          minimumWidth: priceScaleMinWidth,
-        },
-      });
-    } catch {}
-
-    try {
-      series.applyOptions({
-        priceFormat: PRICE_FORMAT,
-      });
-    } catch {}
-
-    forceChartScaleRecovery();
-  }, [PRICE_FORMAT, priceDisplayConfig, priceScaleMinWidth]);
-
-  useEffect(() => {
-    const chart = chartRef.current;
     if (!chart) return;
     try {
       chart.applyOptions({
@@ -1709,18 +1557,17 @@ export default function MainChart({
         minBarSpacing: 2.45,
         },
         rightPriceScale: {
-          autoScale: manualPriceScaleRef.current
-            ? manualPriceScaleModeRef.current === "provider"
-            : true,
+          autoScale: !manualPriceScaleRef.current,
           visible: true,
           borderVisible: false,
           minimumWidth: priceScaleMinWidth,
+          scaleMargins: { top: 0.10, bottom: 0.10 },
         },
         handleScroll: {
           mouseWheel: false,
           pressedMouseMove: true,
           horzTouchDrag: true,
-          vertTouchDrag: false,
+          vertTouchDrag: !!manualPriceScaleRef.current,
         },
         handleScale: {
           mouseWheel: false,
@@ -1737,147 +1584,179 @@ export default function MainChart({
     forceChartScaleRecovery();
   }, [showTimeScale, priceScaleMinWidth]);
 
+  const setManualPriceScaleMode = useCallback((enabled, { preserveVisibleRange = true } = {}) => {
+    const chartApi = chartRef.current;
+    if (!chartApi) return false;
+
+    let currentRange = null;
+    if (preserveVisibleRange) {
+      try {
+        currentRange = chartApi.timeScale?.()?.getVisibleLogicalRange?.() || null;
+      } catch {}
+    }
+
+    manualPriceScaleRef.current = Boolean(enabled);
+
+    try {
+      chartApi.applyOptions({
+        rightPriceScale: {
+          autoScale: !manualPriceScaleRef.current,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+          scaleMargins: { top: 0.10, bottom: 0.10 },
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: !!manualPriceScaleRef.current,
+        },
+        handleScale: {
+          mouseWheel: false,
+          pinch: true,
+          axisPressedMouseMove: { time: true, price: true },
+        },
+      });
+    } catch {}
+
+    if (currentRange) {
+      try {
+        chartApi.timeScale?.()?.setVisibleLogicalRange?.(currentRange);
+      } catch {}
+    }
+
+    return manualPriceScaleRef.current;
+  }, [priceScaleMinWidth]);
+
+  const resetPriceScaleMode = useCallback(() => {
+    const chartApi = chartRef.current;
+    if (!chartApi) return false;
+
+    let currentRange = null;
+    try {
+      currentRange = chartApi.timeScale?.()?.getVisibleLogicalRange?.() || null;
+    } catch {}
+
+    manualPriceScaleRef.current = false;
+    activePriceScaleTouchRef.current = { active: false, identifier: null };
+
+    try {
+      chartApi.applyOptions({
+        rightPriceScale: {
+          autoScale: true,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+          scaleMargins: { top: 0.10, bottom: 0.10 },
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          mouseWheel: false,
+          pinch: true,
+          axisPressedMouseMove: { time: true, price: true },
+        },
+      });
+    } catch {}
+
+    if (currentRange) {
+      try {
+        chartApi.timeScale?.()?.setVisibleLogicalRange?.(currentRange);
+      } catch {}
+    }
+
+    try {
+      requestAnimationFrame(() => forceChartScaleRecovery({ resetPriceScale: true }));
+    } catch {
+      forceChartScaleRecovery({ resetPriceScale: true });
+    }
+
+    return true;
+  }, [priceScaleMinWidth]);
+
   useEffect(() => {
     const chart = chartRef.current;
     const container = containerRef.current;
     if (!chart || !container) return;
 
-    const markManualPriceScale = (clientX) => {
+    const isInsidePriceScale = (clientX) => {
       const host = containerRef.current;
       const chartApi = chartRef.current;
-      if (!host || !chartApi) return;
+      if (!host || !chartApi) return false;
 
       const rect = host.getBoundingClientRect();
       const x = Number(clientX) - rect.left;
-      if (!Number.isFinite(x)) return;
+      if (!Number.isFinite(x)) return false;
 
       const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
-      const startX = Math.max(0, rect.width - rightScaleWidth - 8);
-      if (x < startX) return;
-
-      manualPriceScaleRef.current = true;
-      manualPriceScaleModeRef.current = "native";
-      manualPriceRangeRef.current = null;
-
-      try {
-        chartApi.applyOptions({
-          rightPriceScale: {
-            autoScale: false,
-            visible: true,
-            borderVisible: false,
-            minimumWidth: priceScaleMinWidth,
-          },
-          handleScale: {
-            mouseWheel: false,
-            pinch: true,
-            axisPressedMouseMove: { time: true, price: true },
-          },
-        });
-      } catch {}
+      const startX = Math.max(0, rect.width - rightScaleWidth - 6);
+      return x >= startX;
     };
 
-    const onMouseDown = (event) => markManualPriceScale(event.clientX);
+    const markManualPriceScale = (clientX) => {
+      if (!isInsidePriceScale(clientX)) return false;
+      setManualPriceScaleMode(true, { preserveVisibleRange: true });
+      return true;
+    };
+
+    const onMouseDown = (event) => {
+      markManualPriceScale(event.clientX);
+    };
+
     const onTouchStart = (event) => {
       const touch = event?.touches?.[0];
       if (!touch) return;
-
-      markManualPriceScale(touch.clientX);
-
-      const isMobilePortrait = window.innerWidth <= 767 && window.innerHeight >= window.innerWidth;
-      if (!isMobilePortrait) return;
-
-      const host = containerRef.current;
-      const chartApi = chartRef.current;
-      const series = seriesRef.current;
-      if (!host || !chartApi || !series) return;
-
-      const rect = host.getBoundingClientRect();
-      const x = Number(touch.clientX) - rect.left;
-      const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
-      const startX = Math.max(0, rect.width - rightScaleWidth - 10);
-      if (!Number.isFinite(x) || x < startX) return;
-
-      const visibleRange = getVisiblePriceRangeFromSeries();
-      if (!visibleRange) return;
-
-      const localY = clampNumber(Number(touch.clientY) - rect.top, 0, visibleRange.height);
-      const anchorPriceRaw = Number(series.coordinateToPrice?.(localY));
-      const span = Math.max(1e-8, visibleRange.max - visibleRange.min);
-      const anchorRatio = Number.isFinite(anchorPriceRaw)
-        ? clampNumber((anchorPriceRaw - visibleRange.min) / span, 0, 1)
-        : 0.5;
-
-      mobileAxisGestureRef.current = {
+      if (!markManualPriceScale(touch.clientX)) return;
+      activePriceScaleTouchRef.current = {
         active: true,
-        startY: Number(touch.clientY),
-        startRange: { min: visibleRange.min, max: visibleRange.max, span },
-        anchorRatio,
-        anchorPrice: Number.isFinite(anchorPriceRaw)
-          ? anchorPriceRaw
-          : (visibleRange.min + (span * anchorRatio)),
+        identifier: touch.identifier,
       };
-
-      try {
-        event.preventDefault?.();
-        event.stopPropagation?.();
-      } catch {}
     };
 
     const onTouchMove = (event) => {
-      const state = mobileAxisGestureRef.current;
+      const state = activePriceScaleTouchRef.current;
       if (!state?.active) return;
 
-      const touch = event?.touches?.[0];
+      const touches = Array.from(event?.touches || []);
+      const touch = touches.find((item) => item.identifier === state.identifier) || touches[0];
       if (!touch) return;
 
-      const startRange = state.startRange;
-      if (!startRange) return;
-
-      const dy = Number(touch.clientY) - Number(state.startY || 0);
-      const scaleFactor = Math.exp(dy * 0.0045);
-      const nextSpan = Math.max(1e-8, Number(startRange.span) * scaleFactor);
-      const anchorRatio = clampNumber(Number(state.anchorRatio), 0, 1);
-      const anchorPrice = Number(state.anchorPrice);
-      const nextMin = anchorPrice - (nextSpan * anchorRatio);
-      const nextMax = nextMin + nextSpan;
-
-      applyManualPriceRange({ min: nextMin, max: nextMax });
+      if (!manualPriceScaleRef.current) {
+        setManualPriceScaleMode(true, { preserveVisibleRange: true });
+      }
 
       try {
         event.preventDefault?.();
-        event.stopPropagation?.();
       } catch {}
     };
 
-    const endTouchAxisGesture = () => {
-      mobileAxisGestureRef.current = {
-        active: false,
-        startY: 0,
-        startRange: null,
-        anchorRatio: 0.5,
-        anchorPrice: null,
-      };
+    const endTouchSession = () => {
+      activePriceScaleTouchRef.current = { active: false, identifier: null };
     };
 
     container.addEventListener("mousedown", onMouseDown, true);
-    container.addEventListener("touchstart", onTouchStart, { capture: true, passive: false });
+    container.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
     window.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
-    window.addEventListener("touchend", endTouchAxisGesture, true);
-    window.addEventListener("touchcancel", endTouchAxisGesture, true);
+    window.addEventListener("touchend", endTouchSession, true);
+    window.addEventListener("touchcancel", endTouchSession, true);
 
     return () => {
       container.removeEventListener("mousedown", onMouseDown, true);
       container.removeEventListener("touchstart", onTouchStart, true);
       window.removeEventListener("touchmove", onTouchMove, true);
-      window.removeEventListener("touchend", endTouchAxisGesture, true);
-      window.removeEventListener("touchcancel", endTouchAxisGesture, true);
+      window.removeEventListener("touchend", endTouchSession, true);
+      window.removeEventListener("touchcancel", endTouchSession, true);
     };
-  }, [priceScaleMinWidth]);
+  }, [priceScaleMinWidth, setManualPriceScaleMode]);
 
   useEffect(() => {
-    manualPriceScaleRef.current = false;
-    forceChartScaleRecovery({ resetPriceScale: true });
-  }, [currentPairKey, type, priceScaleMinWidth, showTimeScale]);
+    resetPriceScaleMode();
+  }, [currentPairKey, type, priceScaleMinWidth, showTimeScale, resetPriceScaleMode]);
 
   // ============================================================
   // ✅ CrosshairStore vindo do LWC

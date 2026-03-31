@@ -78,8 +78,8 @@ function isForexSymbol(symbol) {
 }
 
 function getPriceScaleMinWidth(symbol) {
-  if (isForexSymbol(symbol)) return 72;
-  return 84;
+  if (isForexSymbol(symbol)) return 58;
+  return 68;
 }
 
 
@@ -1002,6 +1002,10 @@ function WorkspacePanes({
     stopKeyboardPanAnimation();
     stopRealtimeResetAnimation();
 
+    try {
+      masterChartState?.resetPriceScaleMode?.();
+    } catch {}
+
     const chart = masterChart;
     const ts = chart?.timeScale?.();
     if (!chart || !ts) return;
@@ -1179,7 +1183,7 @@ function WorkspacePanes({
     };
 
     resetState.raf = requestAnimationFrame(tick);
-  }, [masterChart, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
+  }, [masterChart, masterChartState, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
 
   useEffect(() => {
     const guard = prependGuardRef.current;
@@ -1742,21 +1746,21 @@ function WorkspacePanes({
           const scaleStartInHost = rightEdgeInHost - scaleWidth;
 
           if (active.isMaster) {
-            const scalePad = 1;
-            const labelWidth = Math.max(28, Math.round(scaleWidth - scalePad * 2));
+            const scalePad = 0;
+            const labelWidth = Math.max(24, Math.round(scaleWidth - scalePad * 2));
             const labelLeft = scaleStartInHost + scalePad;
 
             priceLabelRef.current.style.width = `${labelWidth}px`;
             priceLabelRef.current.style.minWidth = `${labelWidth}px`;
             priceLabelRef.current.style.maxWidth = `${labelWidth}px`;
             priceLabelRef.current.style.left = `${Math.round(labelLeft)}px`;
-            priceLabelRef.current.style.padding = "2px 4px";
+            priceLabelRef.current.style.padding = "2px 2px";
             priceLabelRef.current.style.textAlign = "center";
             priceLabelRef.current.style.whiteSpace = "nowrap";
             priceLabelRef.current.style.display = "block";
           } else {
-            const panePadLeft = 3;
-            const panePadRight = 6;
+            const panePadLeft = 1;
+            const panePadRight = 3;
             const contentWidth = Math.max(34, Math.min(scaleWidth - (panePadLeft + panePadRight), (txt.length * 7) + 10));
             const labelLeft = scaleStartInHost + panePadLeft;
 
@@ -2050,9 +2054,6 @@ function WorkspacePanes({
                 visible={showScrollToRealtime}
                 onClick={() => {
                   SoundManager.uiClick?.();
-                  try {
-                    masterChartState?.resetPriceScaleToAuto?.();
-                  } catch {}
                   scrollToRealtime();
                 }}
               />
