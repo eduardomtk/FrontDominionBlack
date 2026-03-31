@@ -78,10 +78,12 @@ function isForexSymbol(symbol) {
 }
 
 function getPriceScaleMinWidth(symbol) {
-  if (isForexSymbol(symbol)) return 58;
-  return 68;
+  if (isForexSymbol(symbol)) return 72;
+  return 72;
 }
 
+
+const PRICE_SCALE_RESET_EVENT = "__lwc_price_scale_reset__";
 
 function findNearestTimeIndex(sortedTimes, targetTime) {
   const arr = Array.isArray(sortedTimes) ? sortedTimes : [];
@@ -1002,13 +1004,38 @@ function WorkspacePanes({
     stopKeyboardPanAnimation();
     stopRealtimeResetAnimation();
 
-    try {
-      masterChartState?.resetPriceScaleMode?.();
-    } catch {}
-
     const chart = masterChart;
     const ts = chart?.timeScale?.();
     if (!chart || !ts) return;
+
+    try {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(PRICE_SCALE_RESET_EVENT));
+      }
+
+      chart.applyOptions({
+        rightPriceScale: {
+          autoScale: true,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+        },
+        handleScroll: {
+          mouseWheel: false,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: false,
+        },
+        handleScale: {
+          mouseWheel: false,
+          pinch: true,
+          axisPressedMouseMove: {
+            time: true,
+            price: true,
+          },
+        },
+      });
+    } catch {}
 
     const resetState = realtimeResetRef.current;
     const token = resetState.token;
@@ -1183,7 +1210,7 @@ function WorkspacePanes({
     };
 
     resetState.raf = requestAnimationFrame(tick);
-  }, [masterChart, masterChartState, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
+  }, [masterChart, priceScaleMinWidth, stopKeyboardPanAnimation, stopRealtimeResetAnimation, syncScrollToRealtimeVisibility]);
 
   useEffect(() => {
     const guard = prependGuardRef.current;
@@ -1746,21 +1773,21 @@ function WorkspacePanes({
           const scaleStartInHost = rightEdgeInHost - scaleWidth;
 
           if (active.isMaster) {
-            const scalePad = 0;
-            const labelWidth = Math.max(24, Math.round(scaleWidth - scalePad * 2));
+            const scalePad = 1;
+            const labelWidth = Math.max(28, Math.round(scaleWidth - scalePad * 2));
             const labelLeft = scaleStartInHost + scalePad;
 
             priceLabelRef.current.style.width = `${labelWidth}px`;
             priceLabelRef.current.style.minWidth = `${labelWidth}px`;
             priceLabelRef.current.style.maxWidth = `${labelWidth}px`;
             priceLabelRef.current.style.left = `${Math.round(labelLeft)}px`;
-            priceLabelRef.current.style.padding = "2px 2px";
+            priceLabelRef.current.style.padding = "2px 4px";
             priceLabelRef.current.style.textAlign = "center";
             priceLabelRef.current.style.whiteSpace = "nowrap";
             priceLabelRef.current.style.display = "block";
           } else {
-            const panePadLeft = 1;
-            const panePadRight = 3;
+            const panePadLeft = 3;
+            const panePadRight = 6;
             const contentWidth = Math.max(34, Math.min(scaleWidth - (panePadLeft + panePadRight), (txt.length * 7) + 10));
             const labelLeft = scaleStartInHost + panePadLeft;
 
