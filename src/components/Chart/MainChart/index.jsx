@@ -182,6 +182,7 @@ class WatermarkPrimitive {
 }
 
 const HISTORY_RESET_EVENT = "__lwc_history_reset__";
+const SCROLL_TO_REALTIME_EVENT = "tp:scroll-to-realtime";
 
 function normalizeActiveSymbol(symbol) {
   return String(symbol || "").replace(/\//g, "").trim().toUpperCase();
@@ -680,6 +681,54 @@ export default function MainChart({
     }
 
     return buf;
+  }
+
+  function restoreAutoScrollAndPriceScale({ hard = false } = {}) {
+    manualPriceScaleRef.current = false;
+
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    try {
+      chart.applyOptions({
+        rightPriceScale: {
+          autoScale: true,
+          visible: true,
+          borderVisible: false,
+          minimumWidth: priceScaleMinWidth,
+        },
+        handleScale: {
+          mouseWheel: false,
+          pinch: true,
+          axisPressedMouseMove: { time: true, price: true },
+        },
+      });
+    } catch {}
+
+    try {
+      chart.priceScale?.("right")?.applyOptions?.({ autoScale: true });
+    } catch {}
+
+    try {
+      chart.timeScale?.()?.applyOptions?.({
+        rightOffset: INITIAL_RIGHT_OFFSET,
+        rightBarStaysOnScroll: true,
+        shiftVisibleRangeOnNewBar: false,
+      });
+    } catch {}
+
+    if (hard) {
+      const closed = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current : [];
+      const live = lastLiveCandleRef.current;
+      const range = calcInitialVisibleLogicalRange(closed.length, !!live);
+      if (range) {
+        try {
+          chart.timeScale?.()?.setVisibleLogicalRange?.(range);
+        } catch {}
+      }
+    }
+
+    forceChartScaleRecovery({ resetPriceScale: true });
   }
 
   function forceChartScaleRecovery({ resetPriceScale = false } = {}) {
@@ -1574,18 +1623,25 @@ export default function MainChart({
     const container = containerRef.current;
     if (!chart || !container) return;
 
-    const markManualPriceScale = (clientX) => {
+    const touchAxisState = { active: false, startY: 0, startRange: null };
+
+    const isRightScaleHit = (clientX) => {
       const host = containerRef.current;
       const chartApi = chartRef.current;
-      if (!host || !chartApi) return;
+      if (!host || !chartApi) return false;
 
       const rect = host.getBoundingClientRect();
       const x = Number(clientX) - rect.left;
-      if (!Number.isFinite(x)) return;
+      if (!Number.isFinite(x)) return false;
 
       const rightScaleWidth = getRightPriceScaleWidth(chartApi, priceScaleMinWidth);
       const startX = Math.max(0, rect.width - rightScaleWidth - 8);
-      if (x < startX) return;
+      return x >= startX;
+    };
+
+    const markManualPriceScale = (clientX) => {
+      const chartApi = chartRef.current;
+      if (!chartApi || !isRightScaleHit(clientX)) return false;
 
       manualPriceScaleRef.current = true;
 
@@ -1604,22 +1660,100 @@ export default function MainChart({
           },
         });
       } catch {}
+
+      try {
+        chartApi.priceScale?.("right")?.applyOptions?.({ autoScale: false });
+      } catch {}
+
+      return true;
     };
 
-    const onMouseDown = (event) => markManualPriceScale(event.clientX);
+    const onMouseDown = (event) => {
+      markManualPriceScale(event.clientX);
+    };
+
     const onTouchStart = (event) => {
       const touch = event?.touches?.[0];
-      if (touch) markManualPriceScale(touch.clientX);
+      if (!touch) return;
+
+      const activated = markManualPriceScale(touch.clientX);
+      if (!activated) return;
+
+      const ps = chartRef.current?.priceScale?.("right");
+      const vr = ps?.getVisibleRange?.();
+      const from = Number(vr?.from);
+      const to = Number(vr?.to);
+      if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from) return;
+
+      touchAxisState.active = true;
+      touchAxisState.startY = Number(touch.clientY) || 0;
+      touchAxisState.startRange = { from, to };
+
+      try {
+        event.preventDefault?.();
+      } catch {}
     };
+
+    const onTouchMove = (event) => {
+      if (!touchAxisState.active) return;
+
+      const touch = event?.touches?.[0];
+      const ps = chartRef.current?.priceScale?.("right");
+      if (!touch || !ps?.setVisibleRange || !touchAxisState.startRange) return;
+
+      const deltaY = Number(touch.clientY) - Number(touchAxisState.startY || 0);
+      if (!Number.isFinite(deltaY)) return;
+
+      const startRange = touchAxisState.startRange;
+      const span = Number(startRange.to) - Number(startRange.from);
+      if (!Number.isFinite(span) || span <= 0) return;
+
+      const factor = Math.exp(deltaY * 0.0055);
+      const center = (Number(startRange.from) + Number(startRange.to)) / 2;
+      const nextSpan = clampNumber(span * factor, span * 0.15, span * 20);
+      const nextRange = {
+        from: center - nextSpan / 2,
+        to: center + nextSpan / 2,
+      };
+
+      try {
+        ps.setVisibleRange(nextRange);
+        event.preventDefault?.();
+      } catch {}
+    };
+
+    const endTouchAxis = () => {
+      touchAxisState.active = false;
+      touchAxisState.startRange = null;
+    };
+
+    const onScrollToRealtime = () => {
+      restoreAutoScrollAndPriceScale({ hard: true });
+    };
+
+    try {
+      container.style.touchAction = "none";
+    } catch {}
 
     container.addEventListener("mousedown", onMouseDown, true);
-    container.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
+    container.addEventListener("touchstart", onTouchStart, { capture: true, passive: false });
+    container.addEventListener("touchmove", onTouchMove, { capture: true, passive: false });
+    container.addEventListener("touchend", endTouchAxis, true);
+    container.addEventListener("touchcancel", endTouchAxis, true);
+    container.addEventListener(SCROLL_TO_REALTIME_EVENT, onScrollToRealtime);
 
     return () => {
+      try {
+        container.style.touchAction = "";
+      } catch {}
       container.removeEventListener("mousedown", onMouseDown, true);
       container.removeEventListener("touchstart", onTouchStart, true);
+      container.removeEventListener("touchmove", onTouchMove, true);
+      container.removeEventListener("touchend", endTouchAxis, true);
+      container.removeEventListener("touchcancel", endTouchAxis, true);
+      container.removeEventListener(SCROLL_TO_REALTIME_EVENT, onScrollToRealtime);
     };
-  }, [priceScaleMinWidth]);
+  }, [priceScaleMinWidth, currentPairKey, type]);
 
   useEffect(() => {
     manualPriceScaleRef.current = false;

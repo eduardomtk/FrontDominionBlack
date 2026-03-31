@@ -1006,6 +1006,10 @@ function WorkspacePanes({
     const ts = chart?.timeScale?.();
     if (!chart || !ts) return;
 
+    try {
+      masterContainer?.dispatchEvent?.(new CustomEvent("tp:scroll-to-realtime", { detail: { source: "workspace" } }));
+    } catch {}
+
     const resetState = realtimeResetRef.current;
     const token = resetState.token;
 
