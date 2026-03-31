@@ -34,6 +34,7 @@ import useDrawingsPersistence from "@/components/Chart/Drawings/persistence/useD
 import useIndicatorsPersistence from "@/components/Chart/Indicators/persistence/useIndicatorsPersistence";
 
 import { useTranslation } from "react-i18next";
+import { formatAxisPrice, getPriceScaleMinWidth as getAxisScaleMinWidth } from "@/components/Chart/priceScaleFormat";
 
 function normalizeTf(tf) {
   const s = String(tf || "").trim().toUpperCase();
@@ -69,17 +70,6 @@ function paneKeyFromInstance(inst) {
   if (t === "roc") return PANE_TYPES.ROC;
 
   return null;
-}
-
-function isForexSymbol(symbol) {
-  const s = String(symbol || "").toUpperCase().trim();
-  const pair = s.includes("/") ? s.replace("/", "") : s;
-  return /^[A-Z]{6}$/.test(pair);
-}
-
-function getPriceScaleMinWidth(symbol) {
-  if (isForexSymbol(symbol)) return 64;
-  return 64;
 }
 
 const PRICE_SCALE_RESET_EVENT = "__lwc_price_scale_reset__";
@@ -273,30 +263,12 @@ function getSeriesPrecision(series) {
   return 2;
 }
 
-function countIntegerDigits(price) {
-  const value = Math.abs(Number(price));
-  if (!Number.isFinite(value) || value < 1) return 1;
-  return Math.max(1, Math.floor(Math.log10(value)) + 1);
-}
-
-function trimPriceToSixDigits(price, precision) {
+function formatPriceForSeries(price, series, symbol) {
   const p = Number(price);
   if (!Number.isFinite(p)) return "";
-
-  const safePrecision = clamp(Number.isFinite(precision) ? precision : 0, 0, 10);
-  const raw = p.toFixed(safePrecision);
-  const [intPart, decPart = ""] = raw.split(".");
-  const absIntPart = String(intPart).replace("-", "");
-  const maxDecimals = Math.max(0, 6 - Math.max(1, absIntPart.length || countIntegerDigits(p)));
-  const finalDecimals = Math.min(safePrecision, maxDecimals);
-  return p.toFixed(finalDecimals);
-}
-
-function formatPriceForSeries(price, series) {
-  const p = Number(price);
-  if (!Number.isFinite(p)) return "";
+  if (symbol) return formatAxisPrice(p, symbol);
   const prec = getSeriesPrecision(series);
-  return trimPriceToSixDigits(p, prec);
+  return p.toFixed(prec);
 }
 
 function getCrosshairViewportState() {
@@ -1543,7 +1515,7 @@ function WorkspacePanes({
     stopRealtimeResetAnimation();
   }, [stopKeyboardPanAnimation, stopRealtimeResetAnimation]);
 
-  const priceScaleMinWidth = useMemo(() => getPriceScaleMinWidth(symbol), [symbol]);
+  const priceScaleMinWidth = useMemo(() => getAxisScaleMinWidth(symbol), [symbol]);
 
   const vLineRef = useRef(null);
   const hLineRef = useRef(null);
@@ -1758,7 +1730,7 @@ function WorkspacePanes({
       }
 
       if (priceLabelRef.current) {
-        const txt = formatPriceForSeries(price, active.series);
+        const txt = formatPriceForSeries(price, active.series, symbol);
         if (txt) {
           priceLabelRef.current.textContent = txt;
           priceLabelRef.current.style.top = `${Math.round(topInHost + yInActive)}px`;
@@ -1769,15 +1741,15 @@ function WorkspacePanes({
           const scaleStartInHost = rightEdgeInHost - scaleWidth;
 
           if (active.isMaster) {
-            const scalePad = 0;
-            const labelWidth = Math.max(24, Math.round(scaleWidth - scalePad * 2));
+            const scalePad = 1;
+            const labelWidth = Math.max(28, Math.round(scaleWidth - scalePad * 2));
             const labelLeft = scaleStartInHost + scalePad;
 
             priceLabelRef.current.style.width = `${labelWidth}px`;
             priceLabelRef.current.style.minWidth = `${labelWidth}px`;
             priceLabelRef.current.style.maxWidth = `${labelWidth}px`;
             priceLabelRef.current.style.left = `${Math.round(labelLeft)}px`;
-            priceLabelRef.current.style.padding = "1px 4px";
+            priceLabelRef.current.style.padding = "1px 3px";
             priceLabelRef.current.style.textAlign = "center";
             priceLabelRef.current.style.whiteSpace = "nowrap";
             priceLabelRef.current.style.display = "block";
@@ -2003,11 +1975,11 @@ function WorkspacePanes({
             position: "absolute",
             left: "-9999px",
             top: "-9999px",
-            padding: "1px 4px",
+            padding: "2px 4px",
             borderRadius: 2,
             fontSize: 12,
             fontWeight: 700,
-            lineHeight: "15px",
+            lineHeight: "16px",
             color: crosshairLabelColor,
             background: crosshairLabelBg,
             border: crosshairLabelBorder,
@@ -2018,8 +1990,7 @@ function WorkspacePanes({
             display: "none",
             pointerEvents: "none",
             userSelect: "none",
-            letterSpacing: "0.01em",
-            fontFamily: "Inter, system-ui, sans-serif",
+            letterSpacing: "0.02em",
           }}
         />
         <div
@@ -2028,11 +1999,11 @@ function WorkspacePanes({
             position: "absolute",
             left: "-9999px",
             top: "-9999px",
-            padding: "2px 5px",
+            padding: "2px 4px",
             borderRadius: 2,
             fontSize: 12,
             fontWeight: 700,
-            lineHeight: "15px",
+            lineHeight: "16px",
             color: crosshairLabelColor,
             background: crosshairLabelBg,
             border: crosshairLabelBorder,
@@ -2042,8 +2013,7 @@ function WorkspacePanes({
             display: "none",
             pointerEvents: "none",
             userSelect: "none",
-            letterSpacing: "0.01em",
-            fontFamily: "Inter, system-ui, sans-serif",
+            letterSpacing: "0.02em",
           }}
         />
       </div>

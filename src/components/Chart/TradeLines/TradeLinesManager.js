@@ -1,4 +1,5 @@
 import TradeLineOverlay from "./TradeLineOverlay";
+import { formatAxisPrice } from "@/components/Chart/priceScaleFormat";
 
 function pickNumber(...vals) {
   for (const v of vals) {
@@ -58,10 +59,18 @@ function measureRightPriceScaleWidth(chartContainer) {
   }
 }
 
-function formatPrice(p) {
+function getSeriesSymbol(series) {
+  try {
+    return series?.options?.()?.title || "";
+  } catch {
+    return "";
+  }
+}
+
+function formatPrice(p, series = null) {
   const n = Number(p);
   if (!Number.isFinite(n)) return "";
-  return n.toFixed(5);
+  return formatAxisPrice(n, getSeriesSymbol(series));
 }
 
 function extractPriceFromSeriesData(barLike) {
@@ -388,7 +397,7 @@ export default class TradeLinesManager {
     el.style.opacity = "1";
     el.style.transition = "opacity 120ms ease";
 
-    el.textContent = formatPrice(price);
+    el.textContent = formatPrice(price, this.series);
 
     this.axisOverlay.appendChild(el);
 
