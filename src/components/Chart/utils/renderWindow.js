@@ -47,6 +47,43 @@ function upperBoundByTime(arr, target) {
   return lo;
 }
 
+
+
+const PERF_WINDOW_CACHE = {
+  key: "",
+  value: null,
+};
+
+function buildWindowOptionsSig(options = {}) {
+  return [
+    Number(options.fallbackRecentBars),
+    Number(options.leftWarmupBars),
+    Number(options.leftViewportBufferBars),
+    Number(options.rightViewportBufferBars),
+    Number(options.maxWindowBars),
+    Number(options.minWindowBars),
+  ].join('|');
+}
+
+function buildSeriesSig(closed, liveCandle) {
+  const arr = Array.isArray(closed) ? closed : [];
+  const len = arr.length;
+  const firstT = len ? Number(arr[0]?.time) : NaN;
+  const last = len ? arr[len - 1] : null;
+  const lastT = Number(last?.time);
+  const lastC = Number(last?.close);
+  const liveT = Number(liveCandle?.time);
+  const liveC = Number(liveCandle?.close);
+  return [
+    len,
+    Number.isFinite(firstT) ? firstT : 'NaN',
+    Number.isFinite(lastT) ? lastT : 'NaN',
+    Number.isFinite(lastC) ? lastC : 'NaN',
+    Number.isFinite(liveT) ? liveT : 'NaN',
+    Number.isFinite(liveC) ? liveC : 'NaN',
+  ].join('|');
+}
+
 function buildFullSeries(closed, liveCandle) {
   const arr = Array.isArray(closed) ? closed : [];
   if (!liveCandle || typeof liveCandle !== 'object') return arr;
@@ -94,10 +131,28 @@ export function buildPerformanceWindow(closed, liveCandle, masterChart, options 
 
   if (total <= maxWindowBars) return full;
 
+  const optionsSig = buildWindowOptionsSig({
+    fallbackRecentBars,
+    leftWarmupBars,
+    leftViewportBufferBars,
+    rightViewportBufferBars,
+    maxWindowBars,
+    minWindowBars,
+  });
+  const seriesSig = buildSeriesSig(closed, liveCandle);
+
   const range = getVisibleTimeRange(masterChart);
   if (!range) {
     const keep = Math.max(minWindowBars, fallbackRecentBars);
-    return full.slice(Math.max(0, total - keep));
+    const start = Math.max(0, total - keep);
+    const cacheKey = ['no-range', seriesSig, optionsSig, start, total - 1].join('|');
+    if (PERF_WINDOW_CACHE.key === cacheKey && Array.isArray(PERF_WINDOW_CACHE.value)) {
+      return PERF_WINDOW_CACHE.value;
+    }
+    const out = full.slice(start);
+    PERF_WINDOW_CACHE.key = cacheKey;
+    PERF_WINDOW_CACHE.value = out;
+    return out;
   }
 
   const leftIdxRaw = lowerBoundByTime(full, range.from);
@@ -125,5 +180,13 @@ export function buildPerformanceWindow(closed, liveCandle, masterChart, options 
     end = Math.min(total - 1, start + maxWindowBars - 1);
   }
 
-  return full.slice(start, end + 1);
+  const cacheKey = [seriesSig, optionsSig, leftIdx, rightIdx, start, end].join('|');
+  if (PERF_WINDOW_CACHE.key === cacheKey && Array.isArray(PERF_WINDOW_CACHE.value)) {
+    return PERF_WINDOW_CACHE.value;
+  }
+
+  const out = full.slice(start, end + 1);
+  PERF_WINDOW_CACHE.key = cacheKey;
+  PERF_WINDOW_CACHE.value = out;
+  return out;
 }

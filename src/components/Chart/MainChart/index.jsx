@@ -383,6 +383,7 @@ export default function MainChart({
 
   // ✅ performance: buffer + throttle para overlay indicators (evita clones/GC em tick)
   const overlayBufRef = useRef({ sig: "", buf: [], hasLive: false });
+  const overlayViewportSigRef = useRef("");
   const pendingOverlayRef = useRef(null);
   const overlayRafRef = useRef(0);
   const overlayDelayTimerRef = useRef(0);
@@ -651,12 +652,9 @@ export default function MainChart({
     });
 
     const sig = calcClosedSig(perfWindow);
-    if (sig !== st.sig || !Array.isArray(st.buf) || st.buf.length !== perfWindow.length) {
+    if (sig !== st.sig || !Array.isArray(st.buf) || st.buf !== perfWindow) {
       st.sig = sig;
-      st.buf = perfWindow.slice();
-      st.hasLive = false;
-    } else {
-      st.buf = perfWindow.slice();
+      st.buf = perfWindow;
       st.hasLive = false;
     }
 
@@ -755,7 +753,8 @@ export default function MainChart({
         overlayRafRef.current = 0;
 
         const now = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-        const minMs = isZoomInteractionActive() ? 140 : 90;
+        const zooming = isZoomInteractionActive();
+        const minMs = zooming ? 180 : 90;
 
         if (now - overlayLastRunRef.current < minMs) return;
         overlayLastRunRef.current = now;
@@ -767,7 +766,9 @@ export default function MainChart({
           layer.applyData(input, inst);
         } catch {}
 
-        forceChartScaleRecovery();
+        if (!zooming) {
+          forceChartScaleRecovery();
+        }
       });
     };
 
@@ -1924,6 +1925,18 @@ export default function MainChart({
       rafId = requestAnimationFrame(() => {
         rafId = 0;
         if (!mainSeriesSeededRef.current || !overlaysBootstrappedRef.current) return;
+
+        const ts = chart.timeScale?.();
+        const logical = ts?.getVisibleLogicalRange?.();
+        const viewportSig = logical
+          ? `${Math.round(Number(logical.from) * 4) / 4}|${Math.round(Number(logical.to) * 4) / 4}`
+          : '';
+
+        if (viewportSig && viewportSig === overlayViewportSigRef.current && isZoomInteractionActive()) {
+          return;
+        }
+        overlayViewportSigRef.current = viewportSig;
+
         const closed = Array.isArray(lastClosedCandlesRef.current) ? lastClosedCandlesRef.current : [];
         const live = lastLiveCandleRef.current;
         scheduleOverlayApply(closed, live);

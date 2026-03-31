@@ -3,6 +3,7 @@ import styles from "./DrawingOverlay.module.css";
 
 import { DrawingEngine } from "./core/DrawingEngine";
 import { ChartTransformAdapter } from "./transform/ChartTransformAdapter";
+import { isZoomInteractionActive } from "@/components/Chart/utils/zoomInteraction";
 
 function pickMainPaneCanvasRect(hostEl) {
   if (!hostEl || typeof hostEl.querySelectorAll !== "function") return null;
@@ -462,7 +463,9 @@ export default function DrawingOverlay({
     };
 
     const onWheel = (e) => {
-      bumpLiveRedraw();
+      if (!isZoomInteractionActive()) {
+        bumpLiveRedraw();
+      }
 
       if (gestureLockRef.current) {
         stopNativeEvent(e);

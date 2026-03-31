@@ -426,6 +426,7 @@ export default function IndicatorPaneChart({
   const bgStyleSigRef = useRef("");
   const autoscaleSigRef = useRef("");
   const calcCacheRef = useRef(new Map());
+  const viewportSigRef = useRef("");
   const seriesDataSigRef = useRef({});
 
   const onPaneReadyRef = useRef(onPaneReady);
@@ -1157,8 +1158,11 @@ export default function IndicatorPaneChart({
       const key = `${paneType}|${getInstanceSignature(inst)}|${getFullSeriesSig(calcCandles)}`;
       if (calcCacheRef.current.has(key)) return calcCacheRef.current.get(key);
       const res = calculateIndicatorSeries(inst, calcCandles);
-      calcCacheRef.current.clear();
       calcCacheRef.current.set(key, res);
+      if (calcCacheRef.current.size > 4) {
+        const firstKey = calcCacheRef.current.keys().next().value;
+        if (firstKey) calcCacheRef.current.delete(firstKey);
+      }
       return res;
     };
 
@@ -1166,13 +1170,14 @@ export default function IndicatorPaneChart({
       batchRafRef.current = 0;
       const { candles, liveCandle } = latestBatchRef.current || {};
       const full = buildFullCandleSeries(candles, liveCandle);
+      const zoomingNow = isZoomInteractionActive();
       const calcWindow = buildPerformanceWindow(candles, liveCandle, masterChart, {
-        fallbackRecentBars: 1300,
-        leftWarmupBars: 420,
-        leftViewportBufferBars: 160,
-        rightViewportBufferBars: 100,
-        maxWindowBars: 2200,
-        minWindowBars: 850,
+        fallbackRecentBars: zoomingNow ? 1000 : 1300,
+        leftWarmupBars: zoomingNow ? 300 : 420,
+        leftViewportBufferBars: zoomingNow ? 120 : 160,
+        rightViewportBufferBars: zoomingNow ? 80 : 100,
+        maxWindowBars: zoomingNow ? 1600 : 2200,
+        minWindowBars: zoomingNow ? 700 : 850,
       });
       const fullSig = getFullSeriesSig(full);
       const calcSig = getFullSeriesSig(calcWindow);
@@ -1526,7 +1531,7 @@ export default function IndicatorPaneChart({
           batchDelayTimerRef.current = 0;
           if (batchRafRef.current) return;
           batchRafRef.current = requestAnimationFrame(flushBatch);
-        }, 34);
+        }, 48);
         return;
       }
 
@@ -1539,6 +1544,14 @@ export default function IndicatorPaneChart({
       if (rangeRafId) return;
       rangeRafId = requestAnimationFrame(() => {
         rangeRafId = 0;
+        const logical = masterChart?.timeScale?.()?.getVisibleLogicalRange?.();
+        const viewportSig = logical
+          ? `${Math.round(Number(logical.from) * 4) / 4}|${Math.round(Number(logical.to) * 4) / 4}`
+          : '';
+        if (viewportSig && viewportSig === viewportSigRef.current && isZoomInteractionActive()) {
+          return;
+        }
+        viewportSigRef.current = viewportSig;
         scheduleFlush();
       });
     };
