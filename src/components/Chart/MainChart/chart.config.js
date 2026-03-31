@@ -31,7 +31,7 @@ export const chartConfig = {
 
     fixLeftEdge: false,
     rightBarStaysOnScroll: true,
-    minBarSpacing: 1.4,
+    minBarSpacing: 0.5,
     lockVisibleTimeRangeOnResize: true,
 
     // ✅ Evita o timeScale empurrar ranges de formas diferentes entre panes.

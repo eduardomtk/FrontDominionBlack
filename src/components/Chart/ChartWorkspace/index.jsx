@@ -236,7 +236,7 @@ const VIEWPORT_PRESET = {
 
 const VIEWPORT_LIMITS = {
   MIN_LEFT_FROM: -8.0,
-  MAX_VISIBLE_BARS: 260,
+  MAX_VISIBLE_BARS: 720,
 };
 
 function clamp(n, a, b) {

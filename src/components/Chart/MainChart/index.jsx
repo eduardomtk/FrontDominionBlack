@@ -722,7 +722,7 @@ export default function MainChart({
             shiftVisibleRangeOnNewBar: false,
             fixLeftEdge: false,
             rightBarStaysOnScroll: true,
-            minBarSpacing: 1.4,
+            minBarSpacing: 0.5,
           },
           handleScroll: {
             mouseWheel: false,
@@ -746,7 +746,7 @@ export default function MainChart({
             shiftVisibleRangeOnNewBar: false,
             fixLeftEdge: false,
             rightBarStaysOnScroll: true,
-            minBarSpacing: 1.4,
+            minBarSpacing: 0.5,
           });
         } catch {}
       } catch {}
@@ -1383,7 +1383,7 @@ export default function MainChart({
         shiftVisibleRangeOnNewBar: false,
         fixLeftEdge: false,
         rightBarStaysOnScroll: true,
-        minBarSpacing: 1.4,
+        minBarSpacing: 0.5,
       },
       rightPriceScale: { autoScale: true, visible: true, borderVisible: false, minimumWidth: priceScaleMinWidth },
       handleScroll: {
@@ -1409,7 +1409,7 @@ export default function MainChart({
       const ro = Number(o?.rightOffset);
       const bs = Number(o?.barSpacing);
 
-      const apply = { shiftVisibleRangeOnNewBar: false, fixLeftEdge: false, rightBarStaysOnScroll: true, minBarSpacing: 1.4 };
+      const apply = { shiftVisibleRangeOnNewBar: false, fixLeftEdge: false, rightBarStaysOnScroll: true, minBarSpacing: 0.5 };
 
       if (!Number.isFinite(ro) || ro < 1) apply.rightOffset = 15;
       if (!Number.isFinite(bs) || bs <= 0) apply.barSpacing = 10.5;
@@ -1563,7 +1563,7 @@ export default function MainChart({
           shiftVisibleRangeOnNewBar: false,
         fixLeftEdge: false,
         rightBarStaysOnScroll: true,
-        minBarSpacing: 1.4,
+        minBarSpacing: 0.5,
         },
         rightPriceScale: {
           autoScale: !manualPriceScaleRef.current,
@@ -1753,7 +1753,7 @@ export default function MainChart({
     if (!timeScale) return;
 
     const MIN_LEFT_FROM = -8;
-    const MAX_VISIBLE_BARS = 320;
+    const MAX_VISIBLE_BARS = 720;
     const MIN_VISIBLE_BARS = 12;
     const RIGHT_OFFSET = 15;
 
