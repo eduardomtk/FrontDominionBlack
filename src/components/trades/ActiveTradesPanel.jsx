@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import styles from "./ActiveTradesPanel.module.css";
 import { useTrade } from "../../context/TradeContext";
-import { useMarketStore } from "../../stores/market.store";
 // ✅ i18n
 import { useTranslation } from "react-i18next";
 
@@ -11,18 +10,9 @@ const ActiveTradesPanel = () => {
   const { t } = useTranslation("activeTradesPanel");
   
   const { activeTrades } = useTrade();
-  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
-
-  const readNowMs = () => {
-    try {
-      const now = Number(getServerNowMs?.());
-      if (Number.isFinite(now) && now > 0) return now;
-    } catch {}
-    return Date.now();
-  };
 
   // ms atual (usado para calcular secondsLeft)
-  const [nowMs, setNowMs] = useState(() => readNowMs());
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
     let timeoutId = null;
@@ -30,16 +20,16 @@ const ActiveTradesPanel = () => {
 
     const start = () => {
       // alinha no próximo "virar de segundo"
-      const now = readNowMs();
+      const now = Date.now();
       const msToNextSecond = 1000 - (now % 1000);
 
       timeoutId = setTimeout(() => {
         // bate exatamente na virada
-        setNowMs(readNowMs());
+        setNowMs(Date.now());
 
         // e mantém alinhado
         intervalId = setInterval(() => {
-          setNowMs(readNowMs());
+          setNowMs(Date.now());
         }, 1000);
       }, msToNextSecond);
     };
@@ -50,7 +40,7 @@ const ActiveTradesPanel = () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [getServerNowMs]);
+  }, []);
 
   // ✅ Se não houver trades ativos, NÃO renderiza nada
   if (!activeTrades || activeTrades.length === 0) {
@@ -91,7 +81,7 @@ const ActiveTradesPanel = () => {
               className={`${styles.tradeCard} ${styles[trade.direction.toLowerCase()]}`}
             >
               <div className={styles.left}>
-                <span className={styles.direction}>{trade.symbol || trade.asset || trade.direction}</span>
+                <span className={styles.direction}>{trade.direction}</span>
                 <span className={styles.amount}>R$ {trade.amount.toFixed(2)}</span>
               </div>
 

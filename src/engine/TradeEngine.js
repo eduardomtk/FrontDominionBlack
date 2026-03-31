@@ -27,10 +27,8 @@ export default class TradeEngine {
     this.timeframe = timeframe;
     this.candleEngine = candleEngine;
 
-    // 🔒 fallback de payout por símbolo.
-    // O payout soberano de cada operação deve vir do payload do trade
-    // (o mesmo que o painel da direita já exibiu ao usuário).
-    this.defaultPayout = getPayoutBySymbol(symbol);
+    // 🔒 payout resolvido UMA vez
+    this.payout = getPayoutBySymbol(symbol);
 
     this.activeTrades = new Map();
     this.subscribers = new Set();
@@ -75,20 +73,6 @@ export default class TradeEngine {
     return null;
   }
 
-  _resolveTradePayout(trade) {
-    const incoming = this._num(trade?.payout);
-    if (incoming !== null && incoming > 0 && incoming <= 1) {
-      return incoming;
-    }
-
-    const fallback = this._num(this.defaultPayout);
-    if (fallback !== null && fallback > 0 && fallback <= 1) {
-      return fallback;
-    }
-
-    return 0.92;
-  }
-
   // --------------------------
   // ✅ Open trade
   // --------------------------
@@ -105,38 +89,12 @@ export default class TradeEngine {
     const openPrice = this._getOpenPrice(trade);
     if (typeof openPrice !== "number") return false;
 
-    const resolvedPayout = this._resolveTradePayout(trade);
-
     this.activeTrades.set(trade.id, {
       ...trade,
       openPrice,
-      payout: resolvedPayout,
+      payout: this.payout,
       status: "OPEN",
       expirationTime: expMs, // ✅ ms internamente
-    });
-
-    return true;
-  }
-
-  restoreTrade(trade) {
-    if (!trade?.id) return false;
-    if (this.activeTrades.has(trade.id)) return true;
-
-    const expMs = this.toMs(trade.expiresAt ?? trade.expirationTime);
-    if (!Number.isFinite(expMs)) return false;
-
-    const openPrice = this._num(trade?.openPrice);
-    if (openPrice === null) return false;
-
-    const resolvedPayout = this._resolveTradePayout(trade);
-
-    this.activeTrades.set(trade.id, {
-      ...trade,
-      openPrice,
-      payout: resolvedPayout,
-      status: "OPEN",
-      expirationTime: expMs,
-      expiresAt: expMs,
     });
 
     return true;

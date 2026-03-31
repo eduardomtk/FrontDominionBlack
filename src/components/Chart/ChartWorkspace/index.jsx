@@ -406,8 +406,6 @@ function WorkspacePanes({
   const masterChartRef = useRef(null);
   const requestMoreHistory = useMarketStore((state) => state.loadMoreHistory);
   const prependGuardRef = useRef({ key: "", baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false });
-  const prependProgrammaticShiftRef = useRef(0);
-  const lastLoadMoreRequestRef = useRef({ key: "", oldestTime: 0, at: 0 });
 
   const paneApiRef = useRef(new Map());
   const paneUnsubRef = useRef(new Map());
@@ -1191,17 +1189,10 @@ function WorkspacePanes({
       return;
     }
 
-    const prependApplied =
-      pairCandlesCount > guard.baseCount &&
-      pairOldestTime > 0 &&
-      guard.oldestTime > 0 &&
-      pairOldestTime < guard.oldestTime;
-
-    if (prependApplied) {
+    if (pairCandlesCount > guard.baseCount && pairOldestTime > 0 && guard.oldestTime > 0 && pairOldestTime < guard.oldestTime) {
       const delta = Number(pairCandlesCount) - Number(guard.baseCount || 0);
       const ts = masterChart?.timeScale?.();
-      const liveRange = ts?.getVisibleLogicalRange?.() || null;
-      const baseRange = liveRange || guard.range || null;
+      const baseRange = guard.range || ts?.getVisibleLogicalRange?.() || null;
 
       if (
         ts &&
@@ -1213,8 +1204,6 @@ function WorkspacePanes({
           from: Number(baseRange.from) + delta,
           to: Number(baseRange.to) + delta,
         };
-
-        prependProgrammaticShiftRef.current = Date.now() + 450;
 
         try {
           requestAnimationFrame(() => {
@@ -1233,8 +1222,7 @@ function WorkspacePanes({
       return;
     }
 
-    const guardAge = Date.now() - Number(guard.requestedAt || 0);
-    if (!pairLoadMorePending && guardAge > 2500) {
+    if (!pairLoadMorePending && Date.now() - Number(guard.requestedAt || 0) > 300) {
       prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
     }
   }, [masterChart, pairCandlesCount, pairLoadMorePending, pairOldestTime, runtimeChartKey]);
@@ -1250,7 +1238,6 @@ function WorkspacePanes({
       const range = rangeArg || ts.getVisibleLogicalRange?.();
       const from = Number(range?.from);
       const to = Number(range?.to);
-      const now = Date.now();
 
       if (!clamping && range) {
         let nextRange = null;
@@ -1274,34 +1261,20 @@ function WorkspacePanes({
       syncScrollToRealtimeVisibility();
 
       const NEAR_LEFT_TRIGGER = 35;
-      const lastReq = lastLoadMoreRequestRef.current;
-      const isDuplicateLoadMore =
-        lastReq.key === runtimeChartKey &&
-        Number(lastReq.oldestTime || 0) === Number(pairOldestTime || 0) &&
-        now - Number(lastReq.at || 0) < 1800;
-
       if (
         Number.isFinite(from) &&
         from <= NEAR_LEFT_TRIGGER &&
         pairOldestTime > 0 &&
         pairHasMoreHistory &&
-        !pairLoadMorePending &&
-        now >= Number(prependProgrammaticShiftRef.current || 0) &&
-        !isDuplicateLoadMore
+        !pairLoadMorePending
       ) {
         prependGuardRef.current = {
           key: runtimeChartKey,
           baseCount: pairCandlesCount,
           range: Number.isFinite(from) && Number.isFinite(to) ? { from, to } : null,
           oldestTime: pairOldestTime,
-          requestedAt: now,
+          requestedAt: Date.now(),
           active: true,
-        };
-
-        lastLoadMoreRequestRef.current = {
-          key: runtimeChartKey,
-          oldestTime: pairOldestTime,
-          at: now,
         };
 
         try {
@@ -1325,8 +1298,6 @@ function WorkspacePanes({
 
   useEffect(() => {
     prependGuardRef.current = { key: runtimeChartKey, baseCount: 0, range: null, oldestTime: 0, requestedAt: 0, active: false };
-    prependProgrammaticShiftRef.current = 0;
-    lastLoadMoreRequestRef.current = { key: runtimeChartKey, oldestTime: 0, at: 0 };
     syncScrollToRealtimeVisibility();
   }, [runtimeChartKey, visiblePanes.length, syncScrollToRealtimeVisibility]);
 

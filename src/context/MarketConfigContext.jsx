@@ -523,7 +523,7 @@ export function MarketConfigProvider({ children }) {
 
       const fb = Number(fallbackRate);
       if (Number.isFinite(fb)) return clamp(fb, 0, 1);
-      return 0.92;
+      return 0.7;
     },
     [getConfig]
   );

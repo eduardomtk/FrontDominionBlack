@@ -11,6 +11,7 @@ import {
 import { usePairUI } from "./PairUIContext";
 import { useMarketStore } from "@/stores/market.store";
 import CandleEngine from "../engine/CandleEngine";
+import { useTrade } from "./TradeContext";
 
 const CandleContext = createContext(null);
 
@@ -51,23 +52,11 @@ export function CandleEngineProvider({ children }) {
     return `${symbolKey}|${tfKey}`;
   }, [symbolKey, tfKey]);
 
-  const pinnedMap = useMarketStore((s) => s.pinned || {});
-
   const activePairKeys = useMemo(() => {
     const set = new Set();
     if (currentPairKey) set.add(currentPairKey);
-
-    for (const [rawKey, count] of Object.entries(pinnedMap || {})) {
-      if (!rawKey || Number(count) <= 0) continue;
-      const [pair, tf] = String(rawKey).split("|");
-      const normalizedPair = normalizePair(pair);
-      const normalizedTf = normalizeTf(tf);
-      if (!normalizedPair || !normalizedTf) continue;
-      set.add(`${normalizedPair}|${normalizedTf}`);
-    }
-
     return set;
-  }, [currentPairKey, pinnedMap]);
+  }, [currentPairKey]);
 
   // ============================================================
   // ✅ Anti-rollback shield (por pairKey)

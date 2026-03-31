@@ -1300,14 +1300,9 @@ export default function MainChart({
       (Math.abs(ftDiff - step) <= eps || Math.abs(ftDiff) <= eps) &&
       Math.abs(nDiff) <= 1;
 
-    const purePrepend =
-      Math.abs(ltDiff) <= eps &&
-      ftDiff < (-eps) &&
-      nDiff > 0;
-
     lastHistoryMetaRef.current = { armed: true, type, n, ft, lt, step };
 
-    if (normalSameSnapshot || normalRollOrAppend || purePrepend) return false;
+    if (normalSameSnapshot || normalRollOrAppend) return false;
 
     if (lt < Number(prev.lt) - eps) return true;
     if (Math.abs(ltDiff) > step * 5) return true;

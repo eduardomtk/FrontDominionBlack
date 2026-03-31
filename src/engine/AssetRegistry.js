@@ -74,11 +74,8 @@ export function getAssetBySymbol(symbol) {
  * 3️⃣ fallback seguro
  */
 export function getPayoutBySymbol(symbol) {
-  const normalized = String(symbol || "").trim().toUpperCase();
-  if (!normalized) return 0.92;
-
-  const dynamic = usePayoutStore.getState().payouts[normalized];
+  const dynamic = usePayoutStore.getState().payouts[symbol];
   if (typeof dynamic === "number") return dynamic;
 
-  return ASSET_MAP[normalized]?.payout ?? 0.92;
+  return ASSET_MAP[symbol]?.payout ?? 0.7;
 }

@@ -304,7 +304,7 @@ const RightTradePanel = ({ onHoverAction }) => {
   }, [pairData]);
 
   const payout = useMemo(() => {
-    if (!symbol) return 0.92;
+    if (!symbol) return 0.7;
     return clamp(getPayoutRate(symbol, 0.92), 0, 1);
   }, [symbol, getPayoutRate]);
 

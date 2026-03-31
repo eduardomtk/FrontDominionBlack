@@ -91,45 +91,31 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   position: relative;
   cursor: pointer;
   min-width: 0;
-  gap: 1px;
-  line-height: 1;
 }
 
 .balanceRealMode {}
 .balanceDemoMode {}
 
 .badgeReal {
-  font-size: 9px;
-  font-weight: 900;
-  color: #23d98a;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  letter-spacing: 0.7px;
-  line-height: 1;
-  text-transform: uppercase;
-  text-align: center;
-  white-space: nowrap;
-  text-shadow: 0 0 6px rgba(0, 192, 118, 0.18);
+  font-size: 8px;
+  font-weight: 800;
+  color: #00c076;
+  background: rgba(0, 192, 118, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .badgeDemo {
-  font-size: 9px;
-  font-weight: 900;
-  color: #ffb347;
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  letter-spacing: 0.7px;
-  line-height: 1;
-  text-transform: uppercase;
-  text-align: center;
-  white-space: nowrap;
-  text-shadow: 0 0 6px rgba(255, 152, 0, 0.18) !important;
+  font-size: 8px;
+  font-weight: 800;
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.1);
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-shadow: 0 0 8px rgba(255, 152, 0, 0.28) !important;
 }
 
 .balanceValue {
@@ -705,17 +691,13 @@
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceContainer {
   min-width: 78px;
-  gap: 1px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeReal,
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .badgeDemo {
-  font-size: 8px;
-  font-weight: 900;
-  padding: 0;
-  border-radius: 0;
-  letter-spacing: 0.55px;
-  background: transparent !important;
+  font-size: 7px;
+  padding: 1px 5px;
+  border-radius: 999px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-landscape"]) .balanceValue,
@@ -843,7 +825,6 @@
   cursor: pointer;
   overflow: hidden;
   text-align: center;
-  gap: 1px;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .balanceContainer::after {
@@ -874,9 +855,9 @@
   border-radius: 0 !important;
   margin: 0 0 1px 0 !important;
   line-height: 1;
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.45px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.25px;
   text-transform: uppercase;
   box-shadow: none !important;
   width: 100%;
@@ -884,12 +865,12 @@
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeReal {
-  color: #23d98a !important;
+  color: #00c076 !important;
   text-shadow: none !important;
 }
 
 :global(#trading-root[data-layout-mode="mobile-portrait"]) .badgeDemo {
-  color: #ffb347 !important;
+  color: #ff9800 !important;
   text-shadow: none !important;
 }
 
@@ -1044,7 +1025,6 @@
     cursor: pointer;
     overflow: hidden;
     text-align: center;
-    gap: 1px;
   }
 
   .balanceContainer::after {
@@ -1075,9 +1055,9 @@
     border-radius: 0 !important;
     margin: 0 0 1px 0 !important;
     line-height: 1;
-    font-size: 8px;
-    font-weight: 900;
-    letter-spacing: 0.45px;
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.25px;
     text-transform: uppercase;
     box-shadow: none !important;
     width: 100%;
@@ -1085,12 +1065,12 @@
   }
 
   .badgeReal {
-    color: #23d98a !important;
+    color: #00c076 !important;
     text-shadow: none !important;
   }
 
   .badgeDemo {
-    color: #ffb347 !important;
+    color: #ff9800 !important;
     text-shadow: none !important;
   }
 
@@ -1211,17 +1191,13 @@
 
   .balanceContainer {
     min-width: 78px;
-    gap: 1px;
   }
 
   .badgeReal,
   .badgeDemo {
-    font-size: 8px;
-    font-weight: 900;
-    padding: 0;
-    border-radius: 0;
-    letter-spacing: 0.55px;
-    background: transparent !important;
+    font-size: 7px;
+    padding: 1px 5px;
+    border-radius: 999px;
   }
 
   .balanceValue,

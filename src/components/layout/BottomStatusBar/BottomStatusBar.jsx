@@ -2,29 +2,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import styles from "./BottomStatusBar.module.css";
 import { FaExpand, FaCompress, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import SoundManager from "@/sound/SoundManager.js";
-import { useMarketStore } from "@/stores/market.store";
 // ✅ i18n
 import { useTranslation } from "react-i18next";
 
 export default function BottomStatusBar() {
   // ✅ Hook i18n com namespace primário
   const { t, i18n } = useTranslation("bottomStatusBar");
-  const getServerNowMs = useMarketStore((state) => state.getServerNowMs);
 
-  const [nowMs, setNowMs] = useState(() => {
-    try {
-      const v = Number(getServerNowMs?.());
-      return Number.isFinite(v) && v > 0 ? v : Date.now();
-    } catch {
-      return Date.now();
-    }
-  });
+  const [now, setNow] = useState(() => new Date());
   const [isMuted, setIsMuted] = useState(() => localStorage.getItem("tp_muted") === "1");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // ✅ Formatação com traduções usando o relógio soberano do servidor
+  // ✅ Formatação com traduções
   const label = useMemo(() => {
-    const now = new Date(nowMs);
     const parts = new Intl.DateTimeFormat(i18n.language || "pt-BR", {
       timeZone: "America/Sao_Paulo",
       day: "2-digit",
@@ -77,22 +67,12 @@ export default function BottomStatusBar() {
       minute,
       second,
     })} ${t("time.suffix")}`;
-  }, [nowMs, t, i18n.language]);
+  }, [now, t, i18n.language]);
 
   useEffect(() => {
-    const syncNow = () => {
-      try {
-        const v = Number(getServerNowMs?.());
-        setNowMs(Number.isFinite(v) && v > 0 ? v : Date.now());
-      } catch {
-        setNowMs(Date.now());
-      }
-    };
-
-    syncNow();
-    const id = setInterval(syncNow, 250);
+    const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
-  }, [getServerNowMs]);
+  }, []);
 
   useEffect(() => {
     const onFs = () => setIsFullscreen(!!document.fullscreenElement);
