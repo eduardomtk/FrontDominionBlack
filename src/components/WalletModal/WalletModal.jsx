@@ -439,6 +439,10 @@ export default function WalletModal({
   const [historyError, setHistoryError] = useState("");
   const [historyRows, setHistoryRows] = useState([]);
   const historyRtRef = useRef(null);
+  const [withdrawCancelBusy, setWithdrawCancelBusy] = useState(false);
+  const [withdrawCancelError, setWithdrawCancelError] = useState("");
+  const [withdrawCancelTarget, setWithdrawCancelTarget] = useState(null);
+
   
   // ✅ filtros (barra superior do histórico)
   const [historyRange, setHistoryRange] = useState(HISTORY_RANGE.LAST_7_DAYS);
@@ -547,6 +551,9 @@ export default function WalletModal({
     setHistoryLoading(false);
     setHistoryError("");
     setHistoryRows([]);
+    setWithdrawCancelBusy(false);
+    setWithdrawCancelError("");
+    setWithdrawCancelTarget(null);
     // ✅ filtros: default 7 dias
     setHistoryRange(HISTORY_RANGE.LAST_7_DAYS);
     setHistoryFrom("");
@@ -1413,9 +1420,9 @@ const hasActiveBonusLock = useMemo(() => {
     const amount = toNumberSafe(r?.amount_gross) ?? toNumberSafe(r?.amount) ?? toNumberSafe(r?.value) ?? 0;
     const currency = normalizeCurrency(r?.currency || accountCurrency, accountCurrency);
     const method = String(r?.method || r?.payment_method || r?.pay_method || "PIX");
-    const st = String(r?.status || "").toUpperCase();
+    const st = String(r?.status || "").toUpperCase().trim();
     let statusLabel = st || "-";
-    let statusKind = "default"; // ✅ success | pending | expired | canceled | default
+    let statusKind = "default";
     if (st === "PENDING") {
       statusLabel = t("wallet:status.withdraw.pending");
       statusKind = "pending";
@@ -1430,25 +1437,36 @@ const hasActiveBonusLock = useMemo(() => {
       st === "IN_ANALYSIS"
     ) {
       statusLabel = t("wallet:status.withdraw.review");
-      statusKind = "pending"; // ✅ âmbar
+      statusKind = "pending";
     }
     if (st === "PAID" || st === "APPROVED" || st === "COMPLETED" || st === "SUCCESS") {
       statusLabel = t("wallet:status.withdraw.paid");
       statusKind = "success";
     }
-    if (st === "REJECTED") {
-      statusLabel = t("wallet:status.withdraw.rejected");
-      statusKind = "canceled";
-    }
     if (st === "CANCELED" || st === "CANCELLED") {
       statusLabel = t("wallet:status.withdraw.canceled", { defaultValue: "Cancelado" });
       statusKind = "canceled";
     }
-    if (st === "FAILED") {
+    if (st === "REJECTED") {
       statusLabel = t("wallet:status.withdraw.rejected");
       statusKind = "canceled";
     }
-    return { type: "withdraw", ts, date, method, amount, currency, status: statusLabel, statusKind };
+    if (st === "FAILED") {
+      statusLabel = t("wallet:status.withdraw.rejected", { defaultValue: "Recusado" });
+      statusKind = "canceled";
+    }
+    return {
+      type: "withdraw",
+      ts,
+      date,
+      method,
+      amount,
+      currency,
+      status: statusLabel,
+      statusKind,
+      id: r?.id ?? null,
+      rawStatus: st,
+    };
   };
 
   const mapAdminLedgerRow = (r) => {
@@ -1930,6 +1948,69 @@ try { window.focus(); window.print(); } catch (e) {}
     downloadText(`historico_${historyKindKey}_${new Date().toISOString().slice(0, 10)}.csv`, csv);
   };
 
+  const openWithdrawCancelConfirm = useCallback((row) => {
+    if (!row) return;
+    if (String(row?.rawStatus || "").toUpperCase().trim() !== "PENDING") return;
+    SoundManager.uiClick();
+    setWithdrawCancelError("");
+    setWithdrawCancelTarget({
+      id: row?.id ?? null,
+      amount: row?.amount ?? 0,
+      currency: row?.currency || accountCurrency,
+      date: row?.date || "-",
+    });
+  }, [accountCurrency]);
+
+  const closeWithdrawCancelConfirm = useCallback(() => {
+    if (withdrawCancelBusy) return;
+    SoundManager.uiClick();
+    setWithdrawCancelError("");
+    setWithdrawCancelTarget(null);
+  }, [withdrawCancelBusy]);
+
+  const confirmWithdrawCancel = useCallback(async () => {
+    const withdrawId = String(withdrawCancelTarget?.id || "").trim();
+    if (!withdrawId || withdrawCancelBusy) return;
+
+    SoundManager.uiClick();
+    setWithdrawCancelBusy(true);
+    setWithdrawCancelError("");
+
+    try {
+      let actorId = user?.id || null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        actorId = data?.user?.id || actorId || null;
+      } catch {}
+
+      const requestId = `wallet_cancel_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+      const { data, error } = await supabase.rpc("admin_withdraw_transition", {
+        p_withdraw_id: withdrawId,
+        p_action: "CANCEL",
+        p_admin_id: actorId,
+        p_request_id: requestId,
+        p_reason: "Canceled by user",
+        p_provider_payout_id: null,
+        p_txid: null,
+      });
+
+      if (error) throw error;
+      if (data?.ok === false) throw new Error(String(data?.error || t("wallet:history.cancel_withdraw_failed", { defaultValue: "Falha ao cancelar saque." })));
+
+      setWithdrawCancelTarget(null);
+      await Promise.allSettled([
+        loadHistory(),
+        fetchWithdrawLimits(),
+        user?.id ? fetchActiveBonusUsage(user.id) : Promise.resolve(null),
+      ]);
+    } catch (e) {
+      setWithdrawCancelError(String(e?.message || e || t("wallet:history.cancel_withdraw_failed", { defaultValue: "Falha ao cancelar saque." })));
+    } finally {
+      setWithdrawCancelBusy(false);
+    }
+  }, [withdrawCancelBusy, withdrawCancelTarget, user?.id, loadHistory, fetchWithdrawLimits, fetchActiveBonusUsage, t]);
+
   const goTab = (tKey) => {
     SoundManager.uiClick();
     // 🔥 FIX: se entrar em withdraw por qualquer caminho, já liga "Carregando..." antes do paint
@@ -2118,7 +2199,7 @@ try { window.focus(); window.print(); } catch (e) {}
     if (s === t("wallet:status.deposit.success").toUpperCase() || s === t("wallet:status.withdraw.paid").toUpperCase()) return styles.statusChipSuccess;
     if (s === t("wallet:status.deposit.pending").toUpperCase() || s === t("wallet:status.withdraw.review").toUpperCase()) return styles.statusChipPending;
     if (s === t("wallet:status.deposit.expired").toUpperCase()) return styles.statusChipExpired;
-    if (s === t("wallet:status.deposit.canceled").toUpperCase() || s === t("wallet:status.withdraw.rejected").toUpperCase()) return styles.statusChipCanceled;
+    if (s === t("wallet:status.deposit.canceled").toUpperCase() || s === t("wallet:status.withdraw.rejected").toUpperCase() || s === t("wallet:status.withdraw.canceled", { defaultValue: "Cancelado" }).toUpperCase()) return styles.statusChipCanceled;
     return styles.statusChipDefault;
   };
 
@@ -2787,21 +2868,34 @@ try { window.focus(); window.print(); } catch (e) {}
                               ) : null}
                             </div>
                             <div
-                              className={
+                              className={`${styles.historyStatusCell} ${
                                 historyKindKey === "ops"
                                   ? String(h.status || "").toUpperCase() === t("wallet:status.ops.win").toUpperCase()
                                     ? styles.opWin
                                     : String(h.status || "").toUpperCase() === t("wallet:status.ops.loss").toUpperCase()
                                     ? styles.opLoss
-                                    : undefined
-                                  : undefined
-                              }
+                                    : ""
+                                  : ""
+                              }`}
                             >
                               {historyKindKey === "ops" ? (
                                 <span>{h.status || "-"}</span>
                               ) : (
-                                <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
-                                  {statusVisual || "-"}
+                                <span className={styles.historyStatusWrap}>
+                                  <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
+                                    {statusVisual || "-"}
+                                  </span>
+                                  {historyKindKey === "withdraw" && String(h?.rawStatus || "").toUpperCase() === "PENDING" && h?.id ? (
+                                    <button
+                                      type="button"
+                                      className={styles.historyCancelBtn}
+                                      onClick={() => openWithdrawCancelConfirm(h)}
+                                      title={t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}
+                                      aria-label={t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}
+                                    >
+                                      ✕
+                                    </button>
+                                  ) : null}
                                 </span>
                               )}
                             </div>
