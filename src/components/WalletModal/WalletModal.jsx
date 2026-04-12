@@ -444,9 +444,6 @@ export default function WalletModal({
   const [historyRange, setHistoryRange] = useState(HISTORY_RANGE.LAST_7_DAYS);
   const [historyFrom, setHistoryFrom] = useState("");
   const [historyTo, setHistoryTo] = useState("");
-  const [cancelWithdrawTarget, setCancelWithdrawTarget] = useState(null);
-  const [cancelWithdrawBusy, setCancelWithdrawBusy] = useState(false);
-  const [cancelWithdrawError, setCancelWithdrawError] = useState("");
   
   // ✅ debounce do reload do histórico
   const historyReloadTimerRef = useRef(null);
@@ -554,9 +551,6 @@ export default function WalletModal({
     setHistoryRange(HISTORY_RANGE.LAST_7_DAYS);
     setHistoryFrom("");
     setHistoryTo("");
-    setCancelWithdrawTarget(null);
-    setCancelWithdrawBusy(false);
-    setCancelWithdrawError("");
     cleanupDepositRealtime();
     if (historyRtRef.current) {
       supabase.removeChannel(historyRtRef.current);
@@ -574,12 +568,6 @@ export default function WalletModal({
     const onKeyDown = (e) => {
       if (e.key === "Escape") {
         SoundManager.uiClick();
-        if (cancelWithdrawTarget) {
-          setCancelWithdrawTarget(null);
-          setCancelWithdrawBusy(false);
-          setCancelWithdrawError("");
-          return;
-        }
         // ✅ prioridade: se o mini painel de condições estiver aberto, fecha ele primeiro
         if (bonusTermsOpen) {
           setBonusTermsOpen(false);
@@ -1452,19 +1440,7 @@ const hasActiveBonusLock = useMemo(() => {
       statusLabel = t("wallet:status.withdraw.rejected");
       statusKind = "canceled";
     }
-    return {
-      type: "withdraw",
-      ts,
-      date,
-      method,
-      amount,
-      currency,
-      status: statusLabel,
-      statusKind,
-      withdrawId: r?.id || null,
-      rawStatus: st,
-      canCancel: st === "PENDING",
-    };
+    return { type: "withdraw", ts, date, method, amount, currency, status: statusLabel, statusKind };
   };
 
   const mapAdminLedgerRow = (r) => {
@@ -1640,65 +1616,6 @@ const hasActiveBonusLock = useMemo(() => {
   }, [historyKind]);
 
   const historyLabel = historyKindKey === "deposit" ? t("wallet:history.kind.deposit") : historyKindKey === "withdraw" ? t("wallet:history.kind.withdraw") : t("wallet:history.kind.ops");
-
-
-  const closeCancelWithdrawConfirm = useCallback(() => {
-    setCancelWithdrawTarget(null);
-    setCancelWithdrawBusy(false);
-    setCancelWithdrawError("");
-  }, []);
-
-  const openCancelWithdrawConfirm = useCallback((row) => {
-    if (!row?.withdrawId) return;
-    SoundManager.uiClick();
-    setCancelWithdrawError("");
-    setCancelWithdrawBusy(false);
-    setCancelWithdrawTarget(row);
-  }, []);
-
-  const confirmCancelWithdraw = useCallback(async () => {
-    if (!cancelWithdrawTarget?.withdrawId || cancelWithdrawBusy) return;
-    try {
-      SoundManager.uiClick();
-      setCancelWithdrawBusy(true);
-      setCancelWithdrawError("");
-
-      let actorId = user?.id || null;
-      try {
-        const { data } = await supabase.auth.getUser();
-        actorId = data?.user?.id || actorId;
-      } catch {
-        // mantém fallback acima
-      }
-
-      const requestId = `wallet_cancel_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-      const { data, error } = await supabase.rpc("admin_withdraw_transition", {
-        p_withdraw_id: cancelWithdrawTarget.withdrawId,
-        p_action: "CANCEL",
-        p_admin_id: actorId,
-        p_request_id: requestId,
-        p_reason: "user_cancel_from_wallet",
-        p_provider_payout_id: null,
-        p_txid: null,
-      });
-
-      if (error) throw error;
-      if (data?.ok !== true) {
-        throw new Error(String(data?.error || t("wallet:history.cancel_withdraw_failed", { defaultValue: "Não foi possível cancelar este saque." })));
-      }
-
-      closeCancelWithdrawConfirm();
-      await Promise.allSettled([
-        loadHistory(),
-        fetchWithdrawLimits(),
-        user?.id ? fetchActiveBonusUsage(user.id) : Promise.resolve(null),
-      ]);
-    } catch (e) {
-      setCancelWithdrawError(String(e?.message || t("wallet:history.cancel_withdraw_failed", { defaultValue: "Não foi possível cancelar este saque." })));
-    } finally {
-      setCancelWithdrawBusy(false);
-    }
-  }, [cancelWithdrawTarget?.withdrawId, cancelWithdrawBusy, closeCancelWithdrawConfirm, loadHistory, t, user?.id]);
 
   const historyFiltered = useMemo(() => {
     const { from, to } = resolvedRange;
@@ -2875,21 +2792,8 @@ try { window.focus(); window.print(); } catch (e) {}
                               {historyKindKey === "ops" ? (
                                 <span>{h.status || "-"}</span>
                               ) : (
-                                <span className={styles.statusCellWrap}>
-                                  <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
-                                    {statusVisual || "-"}
-                                  </span>
-                                  {historyKindKey === "withdraw" && h?.type === "withdraw" && h?.canCancel ? (
-                                    <button
-                                      type="button"
-                                      className={styles.statusActionBtn}
-                                      onClick={() => openCancelWithdrawConfirm(h)}
-                                      aria-label={t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}
-                                      title={t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}
-                                    >
-                                      ✕
-                                    </button>
-                                  ) : null}
+                                <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
+                                  {statusVisual || "-"}
                                 </span>
                               )}
                             </div>
@@ -2924,56 +2828,6 @@ try { window.focus(); window.print(); } catch (e) {}
               </div>
             )}
           </div>
-
-          {cancelWithdrawTarget ? (
-            <div
-              className={styles.confirmOverlay}
-              role="dialog"
-              aria-modal="false"
-              aria-label={t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}
-              onMouseDown={(e) => {
-                if (e.target === e.currentTarget && !cancelWithdrawBusy) closeCancelWithdrawConfirm();
-              }}
-            >
-              <div className={styles.confirmCard}>
-                <div className={styles.confirmHeader}>
-                  <div className={styles.confirmTitle}>{t("wallet:history.cancel_withdraw", { defaultValue: "Cancelar saque" })}</div>
-                  <button
-                    type="button"
-                    className={styles.confirmClose}
-                    onClick={closeCancelWithdrawConfirm}
-                    aria-label={t("wallet:common.close")}
-                    disabled={cancelWithdrawBusy}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className={styles.confirmBody}>
-                  <div className={styles.confirmText}>
-                    {t("wallet:history.cancel_withdraw_confirm", {
-                      defaultValue: "Deseja realmente cancelar este saque pendente? O valor será devolvido para sua conta automaticamente.",
-                    })}
-                  </div>
-                  <div className={styles.confirmMeta}>
-                    <span>{cancelWithdrawTarget?.date || "-"}</span>
-                    <span>•</span>
-                    <span>{cancelWithdrawTarget?.amount != null ? moneyText(cancelWithdrawTarget.amount, cancelWithdrawTarget?.currency || accountCurrency) : "-"}</span>
-                  </div>
-                  {cancelWithdrawError ? <div className={styles.confirmError}>{cancelWithdrawError}</div> : null}
-                </div>
-                <div className={styles.confirmActions}>
-                  <button type="button" className={styles.confirmSecondaryBtn} onClick={closeCancelWithdrawConfirm} disabled={cancelWithdrawBusy}>
-                    {t("wallet:common.no", { defaultValue: "Não" })}
-                  </button>
-                  <button type="button" className={styles.confirmPrimaryBtn} onClick={confirmCancelWithdraw} disabled={cancelWithdrawBusy}>
-                    {cancelWithdrawBusy
-                      ? t("wallet:common.loading", { defaultValue: "Carregando..." })
-                      : t("wallet:common.yes_cancel", { defaultValue: "Sim, cancelar" })}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {/* ✅ Mini painel: Condições do bônus (aberto via "Confira as condições do bônus") */}
           {bonusTermsOpen ? (
