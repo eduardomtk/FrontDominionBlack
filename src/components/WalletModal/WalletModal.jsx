@@ -438,7 +438,6 @@ export default function WalletModal({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [historyRows, setHistoryRows] = useState([]);
-  const [cancelWithdrawBusyId, setCancelWithdrawBusyId] = useState("");
   const historyRtRef = useRef(null);
   
   // ✅ filtros (barra superior do histórico)
@@ -1437,23 +1436,19 @@ const hasActiveBonusLock = useMemo(() => {
       statusLabel = t("wallet:status.withdraw.paid");
       statusKind = "success";
     }
-    if (st === "REJECTED" || st === "CANCELED" || st === "CANCELLED" || st === "FAILED") {
+    if (st === "REJECTED") {
       statusLabel = t("wallet:status.withdraw.rejected");
       statusKind = "canceled";
     }
-    return {
-      type: "withdraw",
-      ts,
-      date,
-      method,
-      amount,
-      currency,
-      status: statusLabel,
-      statusKind,
-      withdrawId: r?.id || null,
-      rawStatus: st || "",
-      canCancel: st === "PENDING",
-    };
+    if (st === "CANCELED" || st === "CANCELLED") {
+      statusLabel = t("wallet:status.withdraw.canceled", { defaultValue: "Cancelado" });
+      statusKind = "canceled";
+    }
+    if (st === "FAILED") {
+      statusLabel = t("wallet:status.withdraw.rejected");
+      statusKind = "canceled";
+    }
+    return { type: "withdraw", ts, date, method, amount, currency, status: statusLabel, statusKind };
   };
 
   const mapAdminLedgerRow = (r) => {
@@ -1574,59 +1569,6 @@ const hasActiveBonusLock = useMemo(() => {
       setHistoryLoading(false);
     }
   }, [user?.id, accountType, resolvedRange, t]);
-
-  const cancelPendingWithdraw = useCallback(async (row) => {
-    const withdrawId = String(row?.withdrawId || "").trim();
-    if (!withdrawId) return;
-    if (String(row?.type || "") !== "withdraw") return;
-    if (String(row?.rawStatus || "").toUpperCase() !== "PENDING") return;
-    if (cancelWithdrawBusyId && cancelWithdrawBusyId !== withdrawId) return;
-
-    const confirmed = window.confirm(
-      t("wallet:withdraw.cancel_confirm", {
-        defaultValue: "Deseja realmente cancelar este saque pendente?",
-      })
-    );
-    if (!confirmed) return;
-
-    setCancelWithdrawBusyId(withdrawId);
-    setHistoryError("");
-
-    try {
-      let actorId = null;
-      try {
-        const authRes = await supabase.auth.getUser();
-        actorId = authRes?.data?.user?.id || user?.id || null;
-      } catch {
-        actorId = user?.id || null;
-      }
-
-      const requestId = `wallet_cancel_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-      const { data, error } = await supabase.rpc("admin_withdraw_transition", {
-        p_withdraw_id: withdrawId,
-        p_action: "CANCEL",
-        p_admin_id: actorId,
-        p_request_id: requestId,
-        p_reason: "USER_CANCEL_PENDING_WITHDRAW",
-        p_provider_payout_id: null,
-        p_txid: null,
-      });
-
-      if (error) throw error;
-      if (data?.ok !== true) throw new Error(String(data?.error || t("wallet:history.load_failed")));
-
-      await Promise.allSettled([
-        loadHistory(),
-        fetchWithdrawLimits(),
-        fetchActiveBonusUsage(user?.id || null),
-      ]);
-    } catch (e) {
-      console.warn("[WalletModal] cancelPendingWithdraw error:", e?.message || e);
-      setHistoryError(String(e?.message || t("wallet:history.load_failed")));
-    } finally {
-      setCancelWithdrawBusyId("");
-    }
-  }, [cancelWithdrawBusyId, fetchActiveBonusUsage, fetchWithdrawLimits, loadHistory, t, user?.id]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -2857,22 +2799,6 @@ try { window.focus(); window.print(); } catch (e) {}
                             >
                               {historyKindKey === "ops" ? (
                                 <span>{h.status || "-"}</span>
-                              ) : historyKindKey === "withdraw" && h?.canCancel ? (
-                                <span className={styles.statusWithAction}>
-                                  <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
-                                    {statusVisual || "-"}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className={styles.cancelPendingBtn}
-                                    onClick={() => cancelPendingWithdraw(h)}
-                                    disabled={cancelWithdrawBusyId === String(h?.withdrawId || "")}
-                                    aria-label={t("wallet:withdraw.cancel_pending", { defaultValue: "Cancelar saque pendente" })}
-                                    title={t("wallet:withdraw.cancel_pending", { defaultValue: "Cancelar saque pendente" })}
-                                  >
-                                    {cancelWithdrawBusyId === String(h?.withdrawId || "") ? "…" : "✕"}
-                                  </button>
-                                </span>
                               ) : (
                                 <span className={`${styles.statusChip} ${getStatusChipVariantClass(statusVisual, h?.statusKind)}`}>
                                   {statusVisual || "-"}
