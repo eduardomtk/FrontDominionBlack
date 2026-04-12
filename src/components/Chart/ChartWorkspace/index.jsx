@@ -2163,7 +2163,7 @@ export default function ChartWorkspace() {
     <div
       data-chart-workspace-root="true"
       style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-    >
+    
       <PairSelectorButton />
       <PairSelectorPanel isOpen={isPairPanelOpen} onClose={closePairPanel} />
 
