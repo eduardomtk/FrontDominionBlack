@@ -1,0 +1,2207 @@
+:root {
+  --tp-header-h: 56px;
+  --tp-sidebar-w: 64px;
+  --tp-footer-h: 28px;
+
+  /* ✅ Verde premium (com “reflexo” branco) — somente cor */
+  --tp-green-premium: rgba(120, 255, 170, 0.96);
+  --tp-green-premium-soft: rgba(120, 255, 170, 0.82);
+  --tp-green-premium-strong: rgba(150, 255, 200, 0.98);
+  --tp-green-premium-glow: rgba(120, 255, 170, 0.22);
+
+  /* ✅ Status colors (premium) */
+  --tp-status-success: rgba(0, 255, 160, 0.92);
+  --tp-status-danger: rgba(255, 90, 90, 0.92);
+  --tp-status-amber: rgba(255, 196, 60, 0.95);
+}
+
+/* =========================================================
+   ✅ CASCO NOVO (OBRIGATÓRIO) — usado pelo WalletModal.jsx atual
+   Ele usa CSS vars vindas do JS:
+   --wm-top / --wm-left / --wm-right / --wm-bottom
+   ========================================================= */
+.overlayArea {
+  position: fixed;
+
+  /* ✅ defaults corretos (OnBroker-like): recorte respeita header/sidebar/footer */
+  top: var(--wm-top, var(--tp-header-h, 56px));
+  left: var(--wm-left, var(--tp-sidebar-w, 64px));
+  right: var(--wm-right, 0px);
+  bottom: var(--wm-bottom, var(--tp-footer-h, 28px));
+
+  z-index: 3200;
+  pointer-events: auto;
+
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.modalFill {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+
+  /* ✅ permite overlay interno (mini painéis) sem afetar layout */
+  position: relative;
+
+  /* mantém o “feel” premium */
+  background: rgba(10, 12, 16, 0.10);
+}
+
+/* =========================
+   ✅ BÔNUS — mini painel "Condições do bônus"
+   ========================= */
+.bonusTermsOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 72px 16px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.bonusTermsCard {
+  width: min(460px, calc(100% - 24px));
+  border-radius: 12px;
+  background: rgba(18, 20, 26, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.bonusTermsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(12, 14, 18, 0.40);
+}
+
+.bonusTermsTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.bonusTermsClose {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+}
+
+.bonusTermsClose:hover {
+  filter: brightness(1.08);
+}
+
+.bonusTermsBody {
+  padding: 14px;
+}
+
+.bonusTermsSectionTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+  margin-top: 10px;
+}
+
+.bonusTermsSectionTitle:first-child {
+  margin-top: 0;
+}
+
+.bonusTermsText {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+/* =========================
+   ✅ BÔNUS — Termos e Condições (após aplicar cupom)
+   ========================= */
+.bonusTcBox {
+  margin-top: 14px;
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+  background: rgba(18, 20, 26, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.bonusTcTitle {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 8px;
+}
+
+.bonusTcBody {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.bonusTcItem + .bonusTcItem {
+  margin-top: 6px;
+}
+
+/* =========================
+   ROOT DO WALLET — ocupa APENENAS o recorte vindo do JS
+   (os bounds vêm do style inline)
+   ========================= */
+.walletOverlay {
+  position: fixed;
+  inset: auto;
+  pointer-events: auto;
+  z-index: 3210;
+}
+
+/* =========================
+   OVERLAY (GLOBAL)
+   - usado quando você quer overlay tela inteira
+   ========================= */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3190;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* =========================
+   OVERLAY TRADE (antigo por vars)
+   - manter apenas se você ainda usa em algum lugar
+   - se estiver usando recorte via JS, o FIX abaixo vai dominar
+   ========================= */
+.backdropTrade {
+  position: fixed;
+  top: var(--tp-header-h);
+  left: var(--tp-sidebar-w);
+  right: 0;
+  bottom: var(--tp-footer-h);
+  z-index: 3190;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  padding: 0;
+}
+
+/* =========================
+   MODAL (BASE)
+   ========================= */
+.modal {
+  width: min(980px, calc(100vw - 24px));
+  height: min(640px, calc(100vh - 24px));
+  margin: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* wrapper do conteúdo (trade) */
+.modalTrade {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================
+   TOP BAR
+   ========================= */
+.topBar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px 0 0;
+  background: rgba(18, 20, 26, 0.52);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.topBarTrade {
+  padding-left: 0;
+  padding-right: 24px;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.tabBtn {
+  height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.74);
+  font-weight: 800;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tabBtn + .tabBtn {
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.tabBtn:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.active {
+  color: rgba(255, 255, 255, 0.95);
+  border-bottom-color: rgba(0, 255, 160, 0.95);
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* =========================
+   BODY
+   ========================= */
+.body {
+  flex: 1;
+  padding: 14px 24px 0;
+  overflow: hidden;
+}
+
+/* ✅ quando estiver no Step 2/3 do depósito: scroll da tela inteira */
+.bodyScroll {
+  overflow: auto;
+  padding-bottom: 18px;
+}
+
+/* =========================
+   DEPÓSITO
+   ========================= */
+.depositWrap {
+  /* ✅ permite crescer quando houver conteúdos longos (termos do bônus, etc)
+     e o scroll fica no container .body (.bodyScroll) */
+  height: auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 2px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.55;
+}
+
+.stepOn {
+  opacity: 1;
+}
+
+.stepCircle {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.stepOn .stepCircle {
+  background: rgba(0, 255, 160, 0.12);
+  border-color: rgba(0, 255, 160, 0.30);
+}
+
+.stepLabel {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.stepLine {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.depositGrid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 260px;
+  gap: 22px;
+  min-height: 0;
+  align-items: start;
+  justify-content: center;
+}
+
+.leftPane {
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  border-radius: 10px;
+  padding: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: auto;
+}
+
+.rightPane {
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 260px;
+}
+
+.methodCard {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.methodIcon {
+  width: 96px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: rgba(70, 220, 200, 0.92);
+}
+
+.methodPixLogo {
+  display: block;
+  width: 110px;
+  max-width: 110px;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.methodInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.methodSub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.25;
+}
+
+.valueRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding-right: 10px;
+}
+
+.valuePrefix {
+  padding: 0 12px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.72);
+  border-right: 1px solid rgba(255, 255, 255, 0.10);
+  font-weight: 900;
+}
+
+.valueInput {
+  width: 200px;
+  max-width: 200px;
+  height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  padding: 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.quickGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quickBtn {
+  height: 32px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.1px;
+}
+
+.quickBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.promoRow {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.70);
+  font-size: 12px;
+}
+
+.promoBox {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.promoInput {
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.90);
+  padding: 0 12px;
+  outline: none;
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.promoInput:focus {
+  border-color: rgba(0, 255, 160, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 255, 160, 0.10);
+}
+
+.promoApplyBtn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.60);
+  color: rgba(0, 0, 0, 0.92);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.promoApplyBtn:hover {
+  filter: brightness(1.05);
+}
+
+.promoOk {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0, 255, 160, 0.82);
+}
+
+.bonusLine {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.bonusPrefix {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 700;
+}
+
+.bonusLink {
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+  color: rgba(0, 255, 160, 0.78);
+  text-decoration: underline;
+  text-decoration-color: rgba(0, 255, 160, 0.45);
+  text-underline-offset: 2px;
+}
+
+.bonusLink:hover {
+  color: rgba(0, 255, 160, 0.95);
+  text-decoration-color: rgba(0, 255, 160, 0.75);
+}
+
+.receiveTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.receiveTitle {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.receiveArrow {
+  color: rgba(255, 255, 255, 0.28);
+  display: grid;
+  place-items: center;
+  transform: translateY(-1px);
+}
+
+.receiveValue {
+  font-size: 22px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.depositBtn {
+  height: 38px;
+  width: 100%;
+  max-width: 230px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.80);
+  color: rgba(0, 0, 0, 0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.depositBtn:hover {
+  filter: brightness(1.05);
+}
+
+.disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.helpText {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.60);
+  line-height: 1.35;
+  max-width: 240px;
+}
+
+.supportLink {
+  margin-top: -4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(0, 255, 160, 0.78);
+  text-align: left;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.supportLink:hover {
+  color: rgba(0, 255, 160, 0.95);
+}
+
+/* =========================
+   STEP 2 — layout OnBroker
+   ========================= */
+.payPage {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 10px 0 24px;
+}
+
+.payCard {
+  width: min(720px, 92%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 16px 16px 14px;
+}
+
+.paymentTitle {
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.paymentSub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.70);
+  line-height: 1.35;
+}
+
+.qrBox {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+}
+
+.qrFake {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pixCopyTitle {
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pixCopyRow {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 170px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.pixPayloadBox {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  font-size: 12px;
+  line-height: 16px;
+  max-height: 86px;
+  overflow: auto;
+  word-break: break-all;
+  color: rgba(70, 220, 200, 0.92);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+.copyBtn {
+  height: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.copyBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pixWarn {
+  margin-top: 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.60);
+  line-height: 1.35;
+}
+
+.payBottomBtn {
+  margin-top: 14px;
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.80);
+  color: rgba(0, 0, 0, 0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.payBottomBtn:hover {
+  filter: brightness(1.05);
+}
+
+.payBottomSpacer {
+  height: 6px;
+}
+
+/* =========================
+   STEP 3 — processando (OnBroker-like)
+   ========================= */
+.processingPage {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 18px 0 26px;
+}
+
+.processingCard {
+  width: min(720px, 92%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 22px 22px 18px;
+}
+
+.processingRow {
+  display: grid;
+  grid-template-columns: 86px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.processingIcon {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.processingText {
+  min-width: 0;
+}
+
+.processingTitle {
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.15;
+}
+
+.processingP {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.35;
+}
+
+.processingOk {
+  margin-top: 18px;
+  width: 100%;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.80);
+  color: rgba(0, 0, 0, 0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.processingOk:hover {
+  filter: brightness(1.05);
+}
+
+@media (max-width: 720px) {
+  .pixCopyRow {
+    grid-template-columns: 1fr;
+  }
+  .copyBtn {
+    height: 44px;
+  }
+  .processingRow {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+}
+
+/* =========================
+   SAQUE (cards estreitos + pix largo)
+   ========================= */
+.withdrawWrap {
+  /* ✅ permite scroll quando houver conteúdos longos (rollover/avisos/termos)
+     sem “prender” o layout no centro */
+  height: auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 10px 0 12px;
+}
+
+.withdrawGate {
+  width: min(640px, 100%);
+  padding: 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.withdrawMsg {
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+}
+
+.withdrawPanel {
+  width: min(590px, 100%);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.withdrawGrid {
+  grid-template-columns: 230px 320px;
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.withdrawCards {
+  display: grid;
+  gap: 10px;
+}
+
+.withdrawCard {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.withdrawCardLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.70);
+  font-weight: 900;
+}
+
+.withdrawCardValue {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(70, 220, 200, 0.92);
+}
+
+.withdrawPixBox {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.withdrawPixHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.withdrawPixLogo {
+  display: block;
+  width: 100%;
+  max-width: 110px;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.withdrawPixHint {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.60);
+  line-height: 1.3;
+  max-width: none;
+}
+
+.withdrawField {
+  margin-top: 10px;
+}
+
+.withdrawFieldLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.withdrawFullInput {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.withdrawReadOnlyBox {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.90);
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.withdrawWarn {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255, 180, 180, 0.95);
+}
+
+.withdrawTerms {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  user-select: none;
+}
+
+.withdrawBtn {
+  margin-top: 12px;
+  width: 100%;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.80);
+  color: rgba(0, 0, 0, 0.92);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.withdrawBtn:hover {
+  filter: brightness(1.05);
+}
+
+.withdrawMeta {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+@media (max-width: 720px) {
+  .withdrawGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================
+   HISTÓRICO
+   ========================= */
+.historyWrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.historyTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ✅ FILTROS DO HISTÓRICO (sem inline style) */
+.historyFilters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: 10px;
+}
+
+.historyFilterBtn {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  font-weight: 900;
+  opacity: 0.72;
+  transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.historyFilterBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 255, 160, 0.25);
+  opacity: 0.92;
+}
+
+.historyFilterBtnActive {
+  opacity: 1;
+  border-color: rgba(0, 255, 160, 0.30);
+  background: rgba(0, 255, 160, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.historyDate {
+  height: 34px;
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.90);
+  outline: none;
+  font-weight: 800;
+}
+
+.historyDate:focus {
+  border-color: rgba(0, 255, 160, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 255, 160, 0.10);
+}
+
+.historyDateSep {
+  opacity: 0.7;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.70);
+}
+
+.historyDropdown {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+}
+
+.historySelectBtn {
+  height: 36px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.18);
+  color: rgba(255, 255, 255, 0.88);
+  padding: 0 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.historySelectBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 255, 160, 0.25);
+}
+
+.historySelectBtnOpen {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 255, 160, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 255, 160, 0.10);
+}
+
+.historySelectText {
+  font-size: 13px;
+}
+
+.historyChevron {
+  opacity: 0.75;
+  font-size: 12px;
+}
+
+.historyMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(10, 12, 16, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
+  z-index: 3190;
+}
+
+.historyItem {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.historyItem:hover {
+  background: rgba(0, 255, 160, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.historyItemActive {
+  background: rgba(0, 255, 160, 0.10);
+  color: rgba(0, 255, 160, 0.92);
+}
+
+.exportBtn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.exportBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.exportIcon {
+  opacity: 0.9;
+}
+
+.table {
+  flex: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.40);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  /* ✅ necessário pro overlay não mexer no layout */
+  position: relative;
+}
+
+.thead {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 0.9fr;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 900;
+  font-size: 12px;
+  align-items: center; /* só garante alinhamento vertical */
+}
+
+/* ✅ Header alinhado como o body: começa no mesmo “x” da coluna */
+.thead > div {
+  text-align: left;
+  justify-self: start;
+}
+/* Ajuste fino somente do header "Data" */
+.thead > div:first-child {
+  padding-left: 60px; /* aumente ou diminua aqui */
+}
+/* Ajuste fino do header "Método" */
+.thead > div:nth-child(2) {
+  transform: translateX(-12px); /* negativo = esquerda */
+}
+
+/* ✅ Centraliza o header "Status" */
+.thead > div:nth-child(4) {
+  text-align: center;
+  justify-self: center;
+}
+
+/* Ajuste fino da coluna "Valor" (body) */
+.tr > div:nth-child(3) {
+  transform: translateX(-12px); /* negativo = esquerda */
+}
+/* Ajuste fino da coluna "Status" (body) */
+.tr > div:nth-child(4) {
+  text-align: center;
+  justify-self: center;
+  transform: none;
+}
+
+/* ✅ área scrollável do corpo do histórico */
+.tbody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.tr {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 0.9fr;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+}
+
+.emptyRow {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.10);
+}
+
+/* ✅ loading como overlay (não empurra nada, sem "pulo") */
+.historyLoadingOverlay {
+  position: absolute;
+  top: 3px;
+  right: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.70);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  padding: 6px 10px;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ✅ Somente Histórico > Operações: cores de resultado */
+.opWin {
+  color: rgba(0, 255, 160, 0.92);
+  font-weight: 900;
+}
+
+.opLoss {
+  color: rgba(255, 90, 90, 0.92);
+  font-weight: 900;
+}
+
+/* =========================
+   ✅ PINTURA (SOMENTE CORES)
+   - Valor normal (coluna Valor) em verde
+   - “+” e “Bônus” em verde
+   - “+” e valor do bônus em verde
+   ========================= */
+
+/* valor normal fica verde (sem mexer em layout) */
+.amountCell {
+  color: var(--tp-green-premium) !important;
+}
+
+/* “+” e texto “Bônus” em verde premium */
+.bonusBadge,
+.bonusPlus,
+.bonusText {
+  color: var(--tp-green-premium-strong) !important;
+}
+
+/* “+” e valor do bônus em verde premium */
+.bonusAmount,
+.bonusAmountText {
+  color: var(--tp-green-premium-strong) !important;
+}
+
+/* (Opcional) dá aquele “reflexo” discreto via sombra — ainda é apenas cor */
+.bonusBadge,
+.bonusAmount {
+  text-shadow: 0 0 10px var(--tp-green-premium-glow);
+}
+
+/* =========================================================
+   ✅ AJUSTE PREMIUM (pedido)
+   - Método: reduzir “+Bônus” e dar gap pequeno do “Pix”
+   - Valor: reduzir valor do bônus e dar gap pequeno do valor principal
+   (não altera grid/colunas)
+   ========================================================= */
+.bonusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;         /* ✅ gap pequeno entre "+" e "Bônus" */
+  margin-left: 6px; /* ✅ gap pequeno entre "Pix" e "+Bônus" */
+  font-size: 11px;  /* ✅ menor */
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bonusPlus,
+.bonusText {
+  font-size: 11px; /* ✅ garante o tamanho menor mesmo se herdar */
+  line-height: 1;
+}
+
+.bonusAmount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;         /* ✅ gap pequeno entre "+" e valor bônus */
+  margin-left: 6px; /* ✅ gap pequeno entre valor principal e "+bônus" */
+  font-size: 11px;  /* ✅ menor */
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bonusAmountText {
+  font-size: 11px; /* ✅ garante o tamanho menor */
+  line-height: 1;
+}
+
+/* =========================================================
+   ✅ STATUS (CHIP / PÍLULA)
+   - mantém cores
+   - adiciona fundo + borda + pílula premium
+   ========================================================= */
+
+/* ✅ CLASSES USADAS PELO JSX (WalletModal.jsx):
+   <span className={`${styles.statusChip} ${getStatusChipVariantClass(...)}`}> */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 6px 12px;          /* pill */
+  border-radius: 999px;       /* pílula */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  /* “feel” premium */
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* ✅ Cada variante pinta o texto + fundo + borda no mesmo tom */
+.statusChipSuccess {
+  color: var(--tp-status-success) !important;
+  border-color: rgba(0, 255, 160, 0.35) !important;
+  background: rgba(0, 255, 160, 0.10) !important;
+  text-shadow: 0 0 10px rgba(0, 255, 160, 0.12);
+}
+
+.statusChipPending {
+  color: var(--tp-status-amber) !important;
+  border-color: rgba(255, 196, 60, 0.38) !important;
+  background: rgba(255, 196, 60, 0.10) !important;
+  text-shadow: 0 0 10px rgba(255, 196, 60, 0.12);
+}
+
+.statusChipExpired {
+  color: var(--tp-status-danger) !important;
+  border-color: rgba(255, 90, 90, 0.38) !important;
+  background: rgba(255, 90, 90, 0.10) !important;
+  text-shadow: 0 0 10px rgba(255, 90, 90, 0.12);
+}
+
+.statusChipCanceled {
+  color: var(--tp-status-danger) !important;
+  border-color: rgba(255, 90, 90, 0.38) !important;
+  background: rgba(255, 90, 90, 0.10) !important;
+  text-shadow: 0 0 10px rgba(255, 90, 90, 0.12);
+}
+
+.statusChipDefault {
+  color: rgba(255, 255, 255, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.statusWithAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancelPendingBtn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.cancelPendingBtn:hover {
+  background: rgba(255, 90, 90, 0.12);
+  border-color: rgba(255, 90, 90, 0.38);
+  transform: scale(1.04);
+}
+
+.cancelPendingBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ✅ Mantive suas classes antigas também (não atrapalham) */
+.statusSuccess,
+.statusSuccessText,
+.statusSucesso {
+  color: var(--tp-status-success) !important;
+  font-weight: 900;
+}
+
+.statusCancelled,
+.statusCanceled,
+.statusExpired,
+.statusCancelado,
+.statusExpirado {
+  color: var(--tp-status-danger) !important;
+  font-weight: 900;
+}
+
+.statusPending,
+.statusPendente {
+  color: var(--tp-status-amber) !important;
+  font-weight: 900;
+}
+
+/* ✅ Fallback por data-status no próprio cell */
+.tr > div:nth-child(4)[data-status="SUCESSO"],
+.tr > div:nth-child(4)[data-status="Sucesso"],
+.tr > div:nth-child(4)[data-status="success"],
+.tr > div:nth-child(4)[data-status="SUCCESS"] {
+  color: var(--tp-status-success) !important;
+  font-weight: 900;
+}
+
+.tr > div:nth-child(4)[data-status="CANCELADO"],
+.tr > div:nth-child(4)[data-status="Cancelado"],
+.tr > div:nth-child(4)[data-status="EXPIRADO"],
+.tr > div:nth-child(4)[data-status="Expirado"],
+.tr > div:nth-child(4)[data-status="cancelled"],
+.tr > div:nth-child(4)[data-status="expired"] {
+  color: var(--tp-status-danger) !important;
+  font-weight: 900;
+}
+
+.tr > div:nth-child(4)[data-status="PENDENTE"],
+.tr > div:nth-child(4)[data-status="Pendente"],
+.tr > div:nth-child(4)[data-status="pending"] {
+  color: var(--tp-status-amber) !important;
+  font-weight: 900;
+}
+
+/* ✅ Fallback por data-status no row (se você aplicar no .tr) */
+.tr[data-status="SUCESSO"] > div:nth-child(4),
+.tr[data-status="Sucesso"] > div:nth-child(4),
+.tr[data-status="success"] > div:nth-child(4) {
+  color: var(--tp-status-success) !important;
+  font-weight: 900;
+}
+
+.tr[data-status="CANCELADO"] > div:nth-child(4),
+.tr[data-status="Cancelado"] > div:nth-child(4),
+.tr[data-status="EXPIRADO"] > div:nth-child(4),
+.tr[data-status="Expirado"] > div:nth-child(4),
+.tr[data-status="cancelled"] > div:nth-child(4),
+.tr[data-status="expired"] > div:nth-child(4) {
+  color: var(--tp-status-danger) !important;
+  font-weight: 900;
+}
+
+.tr[data-status="PENDENTE"] > div:nth-child(4),
+.tr[data-status="Pendente"] > div:nth-child(4),
+.tr[data-status="pending"] > div:nth-child(4) {
+  color: var(--tp-status-amber) !important;
+  font-weight: 900;
+}
+
+/* =========================
+   RESUMO FIXO (OPERAÇÕES)
+   ========================= */
+.historyOpsSummary {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  margin-top: auto;
+  padding: 10px 12px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(10, 12, 16, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.historyOpsSummaryLeft {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historyOpsSummaryTitle {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.historyOpsSummaryMeta {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.60);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyOpsSummaryValue {
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.88);
+  font-variant-numeric: tabular-nums;
+}
+
+.historyOpsSummaryWin {
+  color: rgba(0, 255, 160, 0.95);
+}
+
+.historyOpsSummaryLoss {
+  color: rgba(255, 80, 80, 0.95);
+}
+
+/* =========================
+   BOTÕES GENÉRICOS (placeholders)
+   ========================= */
+.stepActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.primaryBtn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 255, 160, 0.25);
+  background: rgba(0, 255, 160, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.primaryBtn:hover {
+  background: rgba(0, 255, 160, 0.18);
+}
+
+.ghostBtn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.ghostBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* =========================================================
+   ✅ FIX DEFINITIVO PROFISSIONAL
+   AQUI É O “CONTAINER ROXO” QUE VOCÊ PEDIU:
+   - força o #trading-overlay-host a ser o retângulo recortado
+   - qualquer modal portalado ali fica PRESO nesse retângulo
+   - isso independe do JS e mata o bug na raiz
+   ========================================================= */
+
+/* ✅ CSS Modules: precisa ser :global() pra pegar o id real do DOM */
+:global(#trading-overlay-host) {
+  position: fixed !important;
+  top: var(--tp-header-h, 56px) !important;
+  left: var(--tp-sidebar-w, 64px) !important;
+  right: 0 !important;
+  bottom: var(--tp-footer-h, 28px) !important;
+
+  /* garante que o host realmente "corte" os filhos */
+  overflow: hidden !important;
+
+  /* fica abaixo do overlay final, mas acima do app */
+  z-index: 3000 !important;
+
+  /* o host não captura clique; quem captura é o overlayArea */
+  pointer-events: none !important;
+}
+
+/* ✅ dentro do host: overlay tem que preencher o host (não viewport) */
+#trading-overlay-host .overlayArea {
+  position: absolute !important;
+  inset: 0 !important;
+
+  /* mata qualquer top/left/bottom/right herdado */
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+
+  /* overlay deve capturar clique */
+  pointer-events: auto !important;
+}
+
+/* =========================================================
+   ✅ Ajuste FINO — SOMENTE para Histórico > Operações
+   Move apenas a coluna "Método" (2ª coluna) para a esquerda
+   sem afetar Depósito/Saque.
+   ========================================================= */
+.opsTbody .tr > div:nth-child(2) {
+  transform: translateX(-50px); /* ajuste aqui */
+}
+
+
+/* =========================================================
+   MOBILE PORTRAIT — ajuste visual OnBroker-like
+   Desktop permanece intacto
+   ========================================================= */
+@media (max-width: 768px) {
+  .overlayArea {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .topBar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    height: 40px;
+    padding: 0 8px 0 0;
+    background: rgba(14, 16, 22, 0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .tabs {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .tabBtn {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 40px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .closeBtn {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+
+  .body {
+    padding: 10px 6px 0;
+  }
+
+  .bodyScroll {
+    padding-bottom: 12px;
+  }
+
+  .depositWrap,
+  .withdrawWrap,
+  .historyWrap {
+    max-width: 100%;
+  }
+
+  .stepper {
+    gap: 8px;
+    padding: 2px 2px 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .stepper::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stepItem {
+    gap: 6px;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .stepCircle {
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+
+  .stepLabel {
+    font-size: 11px;
+  }
+
+  .stepLine {
+    min-width: 12px;
+  }
+
+  .depositGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    justify-content: stretch;
+  }
+
+  .leftPane,
+  .withdrawPanel,
+  .table {
+    border-radius: 8px;
+  }
+
+  .leftPane {
+    padding: 10px;
+    overflow: visible;
+  }
+
+  .rightPane {
+    max-width: none;
+    gap: 8px;
+  }
+
+  .methodCard {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .methodPixLogo {
+    width: 84px;
+    max-width: 84px;
+  }
+
+  .methodSub {
+    font-size: 11px;
+  }
+
+  .valueRow {
+    margin-top: 10px;
+    gap: 8px;
+  }
+
+  .valuePrefix {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 14px;
+  }
+
+  .valueInput {
+    width: 100%;
+    max-width: none;
+    height: 40px;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+
+  .quickGrid {
+    gap: 6px;
+  }
+
+  .quickBtn {
+    height: 28px;
+    border-radius: 7px;
+    font-size: 10px;
+  }
+
+  .promoRow,
+  .bonusLine,
+  .helpText,
+  .withdrawWarn,
+  .withdrawMeta,
+  .withdrawTerms,
+  .historyFilterBtn,
+  .historyDate,
+  .historyDateSep {
+    font-size: 11px;
+  }
+
+  .promoBox {
+    gap: 8px;
+  }
+
+  .promoInput,
+  .promoApplyBtn,
+  .historySelectBtn,
+  .exportBtn {
+    height: 34px;
+  }
+
+  .receiveTitle {
+    font-size: 12px;
+  }
+
+  .receiveValue {
+    font-size: 16px;
+  }
+
+  .depositBtn,
+  .payBottomBtn,
+  .withdrawBtn {
+    width: 100%;
+    max-width: none;
+    height: 38px;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  .helpText {
+    max-width: none;
+  }
+
+  .payPage,
+  .processingPage {
+    padding: 8px 0 14px;
+  }
+
+  .payCard,
+  .processingCard {
+    width: 100%;
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .paymentTitle {
+    font-size: 13px;
+  }
+
+  .paymentSub,
+  .pixWarn,
+  .processingP {
+    font-size: 11px;
+  }
+
+  .qrBox {
+    max-width: 240px;
+    padding: 8px;
+  }
+
+  .pixCopyRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .pixPayloadBox {
+    max-height: 72px;
+    font-size: 11px;
+    line-height: 14px;
+  }
+
+  .copyBtn,
+  .processingOk {
+    height: 38px;
+  }
+
+  .processingRow {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    justify-items: start;
+  }
+
+  .processingIcon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .processingTitle {
+    font-size: 15px;
+  }
+
+  .withdrawWrap {
+    padding: 4px 0 10px;
+  }
+
+  .withdrawGate,
+  .withdrawPanel {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .withdrawGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .withdrawCards {
+    gap: 8px;
+  }
+
+  .withdrawCard,
+  .withdrawPixBox {
+    padding: 10px;
+    border-radius: 8px;
+  }
+
+  .withdrawCardLabel,
+  .withdrawFieldLabel,
+  .withdrawPixHint {
+    font-size: 11px;
+  }
+
+  .withdrawCardValue {
+    font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .withdrawPixHeader {
+    gap: 10px;
+    margin-bottom: 8px;
+    align-items: center;
+  }
+
+  .withdrawPixLogo {
+    max-width: 84px;
+  }
+
+  .withdrawReadOnlyBox {
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+
+  .historyWrap {
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .historyTop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .historyDropdown {
+    max-width: none;
+  }
+
+  .historySelectBtn {
+    border-radius: 8px;
+    padding: 0 10px;
+  }
+
+  .historySelectText {
+    font-size: 12px;
+  }
+
+  .historyMenu {
+    border-radius: 10px;
+  }
+
+  .historyItem {
+    height: 36px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .historyFilters {
+    display: none;
+  }
+
+  .exportBtn {
+    padding: 0 10px;
+    gap: 6px;
+    border-radius: 8px;
+    font-size: 11px;
+  }
+
+  .table {
+    min-height: 0;
+  }
+
+  .thead,
+  .tr {
+    grid-template-columns: minmax(74px, 1.1fr) minmax(48px, 0.9fr) minmax(64px, 0.95fr) minmax(78px, 1fr);
+  }
+
+  .thead {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .thead > div:first-child,
+  .thead > div:nth-child(2),
+  .tr > div:nth-child(3),
+  .opsTbody .tr > div:nth-child(2) {
+    padding-left: 0;
+    transform: none;
+  }
+
+  .thead > div:nth-child(4),
+  .tr > div:nth-child(4) {
+    justify-self: end;
+    text-align: right;
+  }
+
+  .tr {
+    padding: 10px;
+    font-size: 12px;
+    align-items: center;
+  }
+
+  .methodChip,
+  .bonusBadge,
+  .bonusAmount,
+  .statusChip {
+    font-size: 10px;
+  }
+
+  .statusChip {
+    padding: 5px 9px;
+  }
+
+  .historyLoadingOverlay {
+    top: 6px;
+    right: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+
+  .historyOpsSummary {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .historyOpsSummaryTitle {
+    font-size: 11px;
+  }
+
+  .historyOpsSummaryMeta {
+    font-size: 10px;
+  }
+
+  .historyOpsSummaryValue {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .tabBtn {
+    font-size: 11px;
+    padding: 0 6px;
+  }
+
+  .quickGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .quickBtn {
+    font-size: 9px;
+  }
+
+  .thead,
+  .tr {
+    grid-template-columns: minmax(68px, 1.05fr) minmax(44px, 0.82fr) minmax(58px, 0.9fr) minmax(74px, 0.95fr);
+  }
+
+  .tr {
+    font-size: 11px;
+  }
+
+  .statusChip {
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+}
