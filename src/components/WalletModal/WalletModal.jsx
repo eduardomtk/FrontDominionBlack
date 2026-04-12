@@ -554,6 +554,9 @@ export default function WalletModal({
     setWithdrawCancelBusy(false);
     setWithdrawCancelError("");
     setWithdrawCancelTarget(null);
+    setWithdrawCancelBusy(false);
+    setWithdrawCancelError("");
+    setWithdrawCancelTarget(null);
     // ✅ filtros: default 7 dias
     setHistoryRange(HISTORY_RANGE.LAST_7_DAYS);
     setHistoryFrom("");
@@ -2024,6 +2027,9 @@ try { window.focus(); window.print(); } catch (e) {}
       setWithdrawError("");
       setWithdrawOk(false);
     }
+    setWithdrawCancelBusy(false);
+    setWithdrawCancelError("");
+    setWithdrawCancelTarget(null);
     if (tKey === "history") {
       void loadHistory();
     }
@@ -2977,6 +2983,78 @@ try { window.focus(); window.print(); } catch (e) {}
               </div>
             </div>
           ) : null}
+
+          {withdrawCancelTarget ? (
+            <div
+              className={styles.historyCancelModalOverlay}
+              onClick={closeWithdrawCancelConfirm}
+            >
+              <div
+                className={styles.historyCancelModalCard}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.historyCancelModalHeader}>
+                  <div className={styles.historyCancelModalTitle}>
+                    {t("wallet:history.cancel_withdraw_confirm_title", { defaultValue: "Cancelar saque" })}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.historyCancelModalClose}
+                    onClick={closeWithdrawCancelConfirm}
+                    aria-label={t("wallet:common.close", { defaultValue: "Fechar" })}
+                    title={t("wallet:common.close", { defaultValue: "Fechar" })}
+                    disabled={withdrawCancelBusy}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className={styles.historyCancelModalBody}>
+                  <div className={styles.historyCancelModalText}>
+                    {t("wallet:history.cancel_withdraw_confirm_text", {
+                      defaultValue: "Deseja realmente cancelar este saque pendente? O valor será devolvido para sua conta.",
+                    })}
+                  </div>
+
+                  <div className={styles.historyCancelModalMeta}>
+                    <div>
+                      <b>{t("wallet:table.date", { defaultValue: "Data" })}:</b> {withdrawCancelTarget?.date || "-"}
+                    </div>
+                    <div>
+                      <b>{t("wallet:table.amount", { defaultValue: "Valor" })}:</b>{" "}
+                      {moneyText(withdrawCancelTarget?.amount || 0, withdrawCancelTarget?.currency || accountCurrency)}
+                    </div>
+                  </div>
+
+                  {withdrawCancelError ? (
+                    <div className={styles.historyCancelModalError}>{withdrawCancelError}</div>
+                  ) : null}
+
+                  <div className={styles.historyCancelModalActions}>
+                    <button
+                      type="button"
+                      className={styles.ghostBtn}
+                      onClick={closeWithdrawCancelConfirm}
+                      disabled={withdrawCancelBusy}
+                    >
+                      {t("wallet:common.cancel", { defaultValue: "Cancelar" })}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.primaryBtn}
+                      onClick={confirmWithdrawCancel}
+                      disabled={withdrawCancelBusy}
+                    >
+                      {withdrawCancelBusy
+                        ? t("wallet:common.loading", { defaultValue: "Carregando" })
+                        : t("wallet:history.confirm_cancel_withdraw", { defaultValue: "Confirmar cancelamento" })}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
         </div>
       </div>
     </div>

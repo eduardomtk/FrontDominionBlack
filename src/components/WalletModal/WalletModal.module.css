@@ -2172,19 +2172,26 @@
 
 
 .historyStatusCell {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .historyStatusWrap {
-  display: inline-flex;
+  position: relative;
+  width: 100%;
+  min-height: 24px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
 }
 
 .historyCancelBtn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: 24px;
   height: 24px;
   border-radius: 999px;
@@ -2197,7 +2204,7 @@
   font-size: 12px;
   line-height: 1;
   font-weight: 900;
-  flex: 0 0 auto;
+  z-index: 1;
 }
 
 .historyCancelBtn:hover {
@@ -2290,7 +2297,7 @@
 
 @media (max-width: 768px) {
   .historyStatusWrap {
-    gap: 6px;
+    min-height: 22px;
   }
 
   .historyCancelBtn {
