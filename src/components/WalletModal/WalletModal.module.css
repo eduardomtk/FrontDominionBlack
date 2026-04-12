@@ -2180,16 +2180,17 @@
 
 .historyStatusWrap {
   position: relative;
-  width: 100%;
+  width: auto;
+  min-width: max-content;
   min-height: 24px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .historyCancelBtn {
   position: absolute;
-  right: 0;
+  right: -28px;
   top: 50%;
   transform: translateY(-50%);
   width: 24px;
@@ -2204,7 +2205,7 @@
   font-size: 12px;
   line-height: 1;
   font-weight: 900;
-  z-index: 1;
+  z-index: 2;
 }
 
 .historyCancelBtn:hover {
@@ -2301,6 +2302,7 @@
   }
 
   .historyCancelBtn {
+    right: -24px;
     width: 22px;
     height: 22px;
     font-size: 11px;
