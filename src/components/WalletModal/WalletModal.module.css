@@ -1489,6 +1489,42 @@
   background: rgba(255, 255, 255, 0.05) !important;
 }
 
+.statusWithAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.cancelPendingBtn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.90);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+  transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.cancelPendingBtn:hover {
+  background: rgba(255, 90, 90, 0.12);
+  border-color: rgba(255, 90, 90, 0.38);
+  transform: scale(1.04);
+}
+
+.cancelPendingBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ✅ Mantive suas classes antigas também (não atrapalham) */
 .statusSuccess,
 .statusSuccessText,
