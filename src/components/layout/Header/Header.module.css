@@ -34,14 +34,22 @@
 
 /* LOGO E BOTÃO + */
 .logo {
-  font-size: 28px;
-  font-weight: 900;
-  color: #ffffff !important;
   flex-shrink: 0;
 
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
+
+  height: 44px;
+  min-width: 230px;
   line-height: 1;
+}
+.logo :global(img),
+.logo :global(svg) {
+  height: 44px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .pro {
