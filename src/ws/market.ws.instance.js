@@ -3,35 +3,106 @@ import MarketWSManager from "./marketwsmanager";
 let wsManager = null;
 let bound = false;
 
-export function getMarketWSManager({ url } = {}) {
-  if (!wsManager) {
-    const isLocal =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1");
+const PRIMARY_WS =
+  import.meta.env.VITE_MARKET_WS_URL ||
+  "ws://51.83.61.131:9002";
 
-    const finalUrl = url || (isLocal
-      ? "ws://localhost:9002"
-      : "wss://ws.dominionblack.com");
+const FALLBACK_WS =
+  import.meta.env.VITE_MARKET_WS_FALLBACK_URL ||
+  "wss://ws-local.dominionblack.com";
 
-    console.log("🚀 [WS_INSTANCE] Criando instância única do MarketWSManager...", finalUrl);
+function createManager(url) {
+  console.log("🚀 [WS_INSTANCE] Criando MarketWSManager:", url);
 
-    wsManager = new MarketWSManager({
-      url: finalUrl,
-      onMarketEvent: null,
-    });
+  const manager = new MarketWSManager({
+    url,
+    onMarketEvent: null,
+  });
 
-    wsManager.connect();
+  manager.__wsUrl = url;
+
+  return manager;
+}
+
+async function probeWebSocket(url, timeout = 2500) {
+  return new Promise((resolve) => {
+    let done = false;
+
+    try {
+      const ws = new WebSocket(url);
+
+      const finalize = (ok) => {
+        if (done) return;
+        done = true;
+
+        try {
+          ws.close();
+        } catch {}
+
+        resolve(ok);
+      };
+
+      const timer = setTimeout(() => finalize(false), timeout);
+
+      ws.onopen = () => {
+        clearTimeout(timer);
+        finalize(true);
+      };
+
+      ws.onerror = () => {
+        clearTimeout(timer);
+        finalize(false);
+      };
+
+      ws.onclose = () => {
+        clearTimeout(timer);
+      };
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+export async function getMarketWSManager({ url } = {}) {
+  if (wsManager) return wsManager;
+
+  const isLocal =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+
+  let finalUrl = url;
+
+  if (!finalUrl) {
+    if (isLocal) {
+      finalUrl = "ws://localhost:9002";
+    } else {
+      console.log("🧠 [WS_INSTANCE] Testando VPS WS...");
+
+      const primaryAlive = await probeWebSocket(PRIMARY_WS, 2200);
+
+      if (primaryAlive) {
+        console.log("✅ [WS_INSTANCE] VPS WS ONLINE.");
+        finalUrl = PRIMARY_WS;
+      } else {
+        console.warn("⚠️ [WS_INSTANCE] VPS OFFLINE. Ativando fallback local tunnel.");
+        finalUrl = FALLBACK_WS;
+      }
+    }
   }
+
+  wsManager = createManager(finalUrl);
+
+  wsManager.connect();
 
   return wsManager;
 }
 
-export function bindMarketWSManagerToStore(updateFn) {
-  const mgr = getMarketWSManager({});
+export async function bindMarketWSManagerToStore(updateFn) {
+  const mgr = await getMarketWSManager({});
 
   if (typeof updateFn !== "function") {
-    console.warn("⚠️ [WS_INSTANCE] bindMarketWSManagerToStore ignorado: updateFn inválido.");
+    console.warn("⚠️ [WS_INSTANCE] bind ignorado: updateFn inválido.");
     return mgr;
   }
 
@@ -53,10 +124,12 @@ export function bindMarketWSManagerToStore(updateFn) {
 
 export function destroyMarketWSManager() {
   if (wsManager) {
-    console.warn("🧨 [WS_INSTANCE] Destruindo conexão e limpando manager.");
+    console.warn("🧨 [WS_INSTANCE] Destruindo conexão WS.");
+
     try {
       wsManager.disconnect();
     } catch {}
+
     wsManager = null;
     bound = false;
   }
