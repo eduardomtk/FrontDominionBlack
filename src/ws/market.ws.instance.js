@@ -5,57 +5,62 @@ let bound = false;
 
 const PRIMARY_WS =
   import.meta.env.VITE_MARKET_WS_URL ||
-  "ws://51.83.61.131:9002";
+  "wss://ws.dominionblack.com";
 
 const FALLBACK_WS =
   import.meta.env.VITE_MARKET_WS_FALLBACK_URL ||
   "wss://ws-local.dominionblack.com";
 
 function createManager(url) {
-  console.log("🚀 [WS_INSTANCE] Criando MarketWSManager:", url);
+  console.log("🚀 [WS_INSTANCE] Criando instância única do MarketWSManager...", url);
 
   const manager = new MarketWSManager({
     url,
     onMarketEvent: null,
   });
 
-  manager.__wsUrl = url;
-
   return manager;
 }
 
 async function probeWebSocket(url, timeout = 2500) {
   return new Promise((resolve) => {
-    let done = false;
+    let settled = false;
 
     try {
       const ws = new WebSocket(url);
 
-      const finalize = (ok) => {
-        if (done) return;
-        done = true;
+      const finish = (result) => {
+        if (settled) return;
+
+        settled = true;
 
         try {
           ws.close();
         } catch {}
 
-        resolve(ok);
+        resolve(result);
       };
 
-      const timer = setTimeout(() => finalize(false), timeout);
+      const timer = setTimeout(() => {
+        finish(false);
+      }, timeout);
 
       ws.onopen = () => {
         clearTimeout(timer);
-        finalize(true);
+        finish(true);
       };
 
       ws.onerror = () => {
         clearTimeout(timer);
-        finalize(false);
+        finish(false);
       };
 
       ws.onclose = () => {
         clearTimeout(timer);
+
+        if (!settled) {
+          finish(false);
+        }
       };
     } catch {
       resolve(false);
@@ -77,16 +82,29 @@ export async function getMarketWSManager({ url } = {}) {
     if (isLocal) {
       finalUrl = "ws://localhost:9002";
     } else {
-      console.log("🧠 [WS_INSTANCE] Testando VPS WS...");
+      console.log("🧪 [WS_INSTANCE] Testando VPS principal...");
 
       const primaryAlive = await probeWebSocket(PRIMARY_WS, 2200);
 
+      console.log("🧪 [WS_INSTANCE] PRIMARY WS RESULT:", primaryAlive);
+
       if (primaryAlive) {
-        console.log("✅ [WS_INSTANCE] VPS WS ONLINE.");
+        console.log("✅ [WS_INSTANCE] VPS ONLINE.");
         finalUrl = PRIMARY_WS;
       } else {
-        console.warn("⚠️ [WS_INSTANCE] VPS OFFLINE. Ativando fallback local tunnel.");
-        finalUrl = FALLBACK_WS;
+        console.warn("⚠️ [WS_INSTANCE] VPS OFFLINE. Ativando fallback local.");
+
+        const fallbackAlive = await probeWebSocket(FALLBACK_WS, 3500);
+
+        console.log("🧪 [WS_INSTANCE] FALLBACK WS RESULT:", fallbackAlive);
+
+        if (fallbackAlive) {
+          console.log("✅ [WS_INSTANCE] FALLBACK LOCAL ONLINE.");
+          finalUrl = FALLBACK_WS;
+        } else {
+          console.error("❌ [WS_INSTANCE] Nenhum WS disponível.");
+          finalUrl = FALLBACK_WS;
+        }
       }
     }
   }
@@ -102,7 +120,7 @@ export async function bindMarketWSManagerToStore(updateFn) {
   const mgr = await getMarketWSManager({});
 
   if (typeof updateFn !== "function") {
-    console.warn("⚠️ [WS_INSTANCE] bind ignorado: updateFn inválido.");
+    console.warn("⚠️ [WS_INSTANCE] bindMarketWSManagerToStore ignorado: updateFn inválido.");
     return mgr;
   }
 
@@ -124,7 +142,7 @@ export async function bindMarketWSManagerToStore(updateFn) {
 
 export function destroyMarketWSManager() {
   if (wsManager) {
-    console.warn("🧨 [WS_INSTANCE] Destruindo conexão WS.");
+    console.warn("🧨 [WS_INSTANCE] Destruindo conexão e limpando manager.");
 
     try {
       wsManager.disconnect();
