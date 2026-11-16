@@ -2,7 +2,7 @@ import MarketWSClient from "./MarketWSClient";
 
 export default class MarketWSManager {
   constructor({ url, onMarketEvent }) {
-    if (!url) throw new Error("MarketWSManager: url é obrigatório");
+    if (!url) throw new Error("MarketWSManager: url Ã© obrigatÃ³rio");
 
     this.onMarketDataCallback = onMarketEvent || null;
 
@@ -14,15 +14,13 @@ export default class MarketWSManager {
     this.url = url;
 
     this.primaryUrl = url;
-    this.fallbackUrl = "ws://127.0.0.1:9002";
 
     this.activeUrl = this.primaryUrl;
 
     this.lastMessageAt = 0;
 
-    this.isFallbackActive = false;
-
     this.healthInterval = null;
+    this.feedWarningActive = false;
 
     this.dataTimeoutMs = 5000;
 
@@ -34,7 +32,7 @@ export default class MarketWSManager {
     });
 
     console.log(
-      "🧩 [MarketWSManager] instanciado com URL:",
+      "ðŸ§© [MarketWSManager] instanciado com URL:",
       this.activeUrl
     );
   }
@@ -43,7 +41,7 @@ export default class MarketWSManager {
     this.onMarketDataCallback = fn;
 
     console.log(
-      "🔗 [MarketWSManager] Bridge com Store configurada com sucesso."
+      "ðŸ”— [MarketWSManager] Bridge com Store configurada com sucesso."
     );
   }
 
@@ -133,7 +131,7 @@ export default class MarketWSManager {
 
   connect() {
     console.log(
-      "🔌 [MarketWSManager] conectando WS...",
+      "ðŸ”Œ [MarketWSManager] conectando WS...",
       this.activeUrl
     );
 
@@ -153,60 +151,26 @@ export default class MarketWSManager {
       const diff = Date.now() - this.lastMessageAt;
 
       if (diff <= this.dataTimeoutMs) {
+        this.feedWarningActive = false;
         return;
       }
 
+      if (this.feedWarningActive) return;
+
+      this.feedWarningActive = true;
+
       console.warn(
-        "❌ [MarketWSManager] Feed morto detectado.",
+        "[MarketWSManager] Feed sem dados. Mantendo VPS principal.",
         {
           diff,
           activeUrl: this.activeUrl,
         }
       );
-
-      this._activateFallback();
     }, 1000);
   }
 
-  _activateFallback() {
-    if (this.isFallbackActive) return;
-
-    console.warn(
-      "🚨 [MarketWSManager] Ativando FALLBACK LOCAL..."
-    );
-
-    this.isFallbackActive = true;
-
-    this.activeUrl = this.fallbackUrl;
-
-    try {
-      this.client.ws?.close();
-    } catch {}
-
-    this.client.url = this.activeUrl;
-
-    this.client.connect();
-
-    const activePairs = Array.from(this.activeKeys);
-
-    for (const key of activePairs) {
-      const [pair, tf] = key.split("|");
-
-      try {
-        this.client.subscribe(
-          pair,
-          tf || "M1",
-          {
-            resnapshot: true,
-            requestLiveSeed: false,
-          }
-        );
-      } catch {}
-    }
-  }
-
   disconnect() {
-    console.log("🧨 [MarketWSManager] desconectando WS...");
+    console.log("ðŸ§¨ [MarketWSManager] desconectando WS...");
 
     try {
       this.client.ws?.close();
@@ -215,6 +179,7 @@ export default class MarketWSManager {
     if (this.healthInterval) {
       clearInterval(this.healthInterval);
       this.healthInterval = null;
+    this.feedWarningActive = false;
     }
 
     this.activeKeys.clear();
@@ -322,7 +287,7 @@ export default class MarketWSManager {
     }
 
     console.log(
-      "📡 [MarketWSManager] par focado:",
+      "ðŸ“¡ [MarketWSManager] par focado:",
       symbol,
       tf,
       prevKey ? `prev=${prevKey}` : "",
