@@ -3,51 +3,42 @@ import MarketWSManager from "./marketwsmanager";
 let wsManager = null;
 let bound = false;
 
-const PRIMARY_WS = import.meta.env.VITE_MARKET_WS_URL;
+export function getMarketWSManager({ url } = {}) {
+  if (!wsManager) {
+    const isLocal =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1");
 
-function createManager(url) {
-  console.log(
-    "[WS_INSTANCE] Criando MarketWSManager:",
-    url
-  );
+    const configuredUrl = import.meta.env.VITE_MARKET_WS_URL;
 
-  return new MarketWSManager({
-    url,
-    onMarketEvent: null,
-  });
-}
+    const finalUrl = url || configuredUrl || (isLocal
+      ? "ws://localhost:9002"
+      : "wss://ws.dominionblack.com");
 
-export async function getMarketWSManager({ url } = {}) {
-  if (wsManager) return wsManager;
+    console.log("🚀 [WS_INSTANCE] Criando instância única do MarketWSManager...", finalUrl);
 
-  const finalUrl = url || PRIMARY_WS;
+    wsManager = new MarketWSManager({
+      url: finalUrl,
+      onMarketEvent: null,
+    });
 
-  if (!finalUrl) {
-    throw new Error(
-      "VITE_MARKET_WS_URL não configurada."
-    );
+    wsManager.connect();
   }
-
-  wsManager = createManager(finalUrl);
-  wsManager.connect();
 
   return wsManager;
 }
 
-export async function bindMarketWSManagerToStore(updateFn) {
-  const mgr = await getMarketWSManager({});
+export function bindMarketWSManagerToStore(updateFn) {
+  const mgr = getMarketWSManager({});
 
   if (typeof updateFn !== "function") {
-    console.warn(
-      "[WS_INSTANCE] updateFn inválido."
-    );
+    console.warn("⚠️ [WS_INSTANCE] bindMarketWSManagerToStore ignorado: updateFn inválido.");
     return mgr;
   }
 
   if (!bound) {
-    console.log(
-      "[WS_INSTANCE] Bind ao Store realizado."
-    );
+    console.log("🔗 [WS_INSTANCE] Bind do MarketWSManager ao Store realizado.");
     bound = true;
   }
 
@@ -55,10 +46,7 @@ export async function bindMarketWSManagerToStore(updateFn) {
     try {
       updateFn(event);
     } catch (e) {
-      console.error(
-        "[WS_INSTANCE] Erro ao encaminhar evento:",
-        e
-      );
+      console.error("❌ [WS_INSTANCE] Erro ao encaminhar evento ao Store:", e);
     }
   });
 
@@ -67,14 +55,10 @@ export async function bindMarketWSManagerToStore(updateFn) {
 
 export function destroyMarketWSManager() {
   if (wsManager) {
-    console.warn(
-      "[WS_INSTANCE] Destruindo conexão."
-    );
-
+    console.warn("🧨 [WS_INSTANCE] Destruindo conexão e limpando manager.");
     try {
       wsManager.disconnect();
     } catch {}
-
     wsManager = null;
     bound = false;
   }
