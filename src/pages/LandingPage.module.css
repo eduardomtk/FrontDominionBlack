@@ -36,11 +36,11 @@
 .bgImage {
   position: fixed;
   inset: 0;
+  /* Fundo contínuo em toda a viewport, sem faixas nas laterais. */
   background:
-    radial-gradient(circle at 18% 40%, rgba(0, 163, 255, 0.028) 0%, transparent 58%),
-    radial-gradient(circle at 75% 75%, rgba(255, 59, 59, 0.018) 0%, transparent 56%),
-    radial-gradient(circle at 55% 15%, rgba(0, 163, 255, 0.016) 0%, transparent 62%),
-    linear-gradient(180deg, #000 0%, #000 100%);
+    radial-gradient(ellipse 85% 65% at 50% 18%, rgba(0, 119, 190, 0.055) 0%, transparent 75%),
+    radial-gradient(ellipse 70% 65% at 50% 82%, rgba(0, 74, 125, 0.035) 0%, transparent 78%),
+    linear-gradient(180deg, #010305 0%, #000000 52%, #010305 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -59,10 +59,11 @@
 .mainGlow {
   position: fixed;
   top: -25%;
-  right: -15%;
-  width: 900px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, 100vw);
   height: 900px;
-  background: radial-gradient(circle, rgba(0, 163, 255, 0.08) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(0, 163, 255, 0.045) 0%, transparent 72%);
   pointer-events: none;
   z-index: 1;
 }
@@ -269,13 +270,20 @@
 .hero::before {
   content: "";
   position: absolute;
-  inset: 0;
+  /* A imagem de fundo ultrapassa o container de 1200px,
+     enquanto textos e elementos mantêm suas posições originais. */
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
   background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.22) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.22) 100%),
     linear-gradient(180deg, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.64) 45%, rgba(0, 0, 0, 0.94) 100%),
     radial-gradient(circle at 30% 40%, rgba(0, 163, 255, 0.12), transparent 62%),
     url("/assets/landing/bgon.jpg");
-  background-size: auto, auto, cover;
-  background-position: 0 0, 0 0, 50% 40%;
+  background-size: auto, auto, auto, cover;
+  background-position: center, center, center, 50% 40%;
   opacity: 1;
   filter: saturate(1) contrast(1.05);
   pointer-events: none;
@@ -416,9 +424,8 @@
 /* ===== REVIEWS SECTION ===== */
 .reviewsSection {
   padding: 80px 0 100px;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0), rgba(255, 255, 255, 0.02) 25%, rgba(255, 255, 255, 0.02) 75%, rgba(0, 0, 0, 0)),
-    linear-gradient(180deg, transparent, rgba(0, 163, 255, 0.012), transparent);
+  /* Sem bloco de cor restrito à largura central do container. */
+  background: transparent;
 }
 
 .reviewsGrid {
@@ -551,7 +558,7 @@
 /* ===== ASSETS SECTION ===== */
 .assetsSection {
   padding: 100px 0;
-  background: linear-gradient(180deg, transparent, rgba(0, 163, 255, 0.012), transparent);
+  background: transparent;
 }
 
 .assetsHeader {
@@ -681,7 +688,7 @@
 /* ===== HOW IT WORKS SECTION ===== */
 .howItWorksSection {
   padding: 120px 0;
-  background: linear-gradient(180deg, transparent, rgba(0, 163, 255, 0.012), transparent);
+  background: transparent;
 }
 
 .stepsGrid {
@@ -972,8 +979,8 @@
 @media (max-width: 640px) and (orientation: portrait) {
   .bgImage {
     background:
-      radial-gradient(circle at 50% 8%, rgba(0, 163, 255, 0.05) 0%, transparent 42%),
-      linear-gradient(180deg, #000 0%, #000 100%);
+      radial-gradient(ellipse 95% 48% at 50% 8%, rgba(0, 119, 190, 0.045) 0%, transparent 80%),
+      linear-gradient(180deg, #010305 0%, #000000 100%);
   }
 
   .gridOverlay {
@@ -983,8 +990,8 @@
 
   .mainGlow {
     top: -12%;
-    right: -40%;
-    width: 460px;
+    left: 50%;
+    width: min(460px, 100vw);
     height: 460px;
     opacity: 0.9;
   }
